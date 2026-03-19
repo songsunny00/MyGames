@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>星焰 · Starry Firework</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Quicksand:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --pink: #FF6B9D;
+      --purple: #C44FE2;
+      --blue: #6B5BFF;
+      --cyan: #4FC3E2;
+      --teal: #4FE2B8;
+      --gold: #E2C74F;
+      --orange: #E27B4F;
+      --light-pink: #FF9EB5;
+      
+      --bg-deep: #050510;
+      --bg-mid: #0a0a20;
+      --bg-light: #12122a;
+      
+      --text-primary: rgba(255, 255, 255, 0.95);
+      --text-secondary: rgba(255, 255, 255, 0.6);
+      --text-muted: rgba(255, 255, 255, 0.35);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Quicksand', sans-serif;
+      background: var(--bg-deep);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    /* 主容器 */
+    .container {
+      display: flex;
+      gap: 40px;
+      align-items: center;
+      padding: 20px;
+    }
+
+    /* 手机框架 */
+    .phone-frame {
+      width: 375px;
+      height: 812px;
+      position: relative;
+      border-radius: 50px;
+      overflow: hidden;
+      box-shadow: 
+        0 0 0 12px #1a1a2e,
+        0 0 0 14px #2a2a4e,
+        0 50px 100px rgba(0, 0, 0, 0.8),
+        0 0 150px rgba(107, 91, 255, 0.15);
+    }
+
+    /* 游戏画布 */
+    .game-canvas {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(175deg, 
+        var(--bg-deep) 0%, 
+        var(--bg-mid) 40%, 
+        var(--bg-light) 100%
+      );
+    }
+
+    /* 星云层 */
+    .nebula {
+      position: absolute;
+      inset: 0;
+      opacity: 0.4;
+      background: 
+        radial-gradient(ellipse 80% 50% at 20% 30%, rgba(107, 91, 255, 0.3) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 80% 20%, rgba(196, 79, 226, 0.25) 0%, transparent 50%),
+        radial-gradient(ellipse 70% 60% at 50% 70%, rgba(79, 195, 226, 0.2) 0%, transparent 50%);
+      animation: nebula-drift 20s ease-in-out infinite;
+    }
+
+    @keyframes nebula-drift {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      50% { transform: scale(1.1) rotate(2deg); }
+    }
+
+    /* 星星层 */
+    .stars-layer {
+      position: absolute;
+      inset: 0;
+    }
+
+    .star {
+      position: absolute;
+      border-radius: 50%;
+      background: white;
+    }
+
+    .star--small {
+      width: 1px;
+      height: 1px;
+      box-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
+    }
+
+    .star--medium {
+      width: 2px;
+      height: 2px;
+      box-shadow: 0 0 4px rgba(255, 255, 255, 0.9);
+    }
+
+    .star--large {
+      width: 3px;
+      height: 3px;
+      box-shadow: 0 0 8px rgba(255, 255, 255, 1);
+    }
+
+    .star--twinkle {
+      animation: twinkle var(--duration, 3s) ease-in-out infinite;
+      animation-delay: var(--delay, 0s);
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    /* 极光 */
+    .aurora {
+      position: absolute;
+      top: 0;
+      left: -10%;
+      right: -10%;
+      height: 45%;
+      background: linear-gradient(180deg,
+        rgba(107, 91, 255, 0.08) 0%,
+        rgba(196, 79, 226, 0.12) 30%,
+        rgba(79, 195, 226, 0.08) 60%,
+        transparent 100%
+      );
+      filter: blur(20px);
+      animation: aurora-wave 12s ease-in-out infinite;
+    }
+
+    @keyframes aurora-wave {
+      0%, 100% { transform: translateX(-5%) scaleY(1); }
+      33% { transform: translateX(3%) scaleY(1.15); }
+      66% { transform: translateX(-2%) scaleY(0.95); }
+    }
+
+    /* 烟花展示区 */
+    .firework-showcase {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 280px;
+      height: 280px;
+      pointer-events: none;
+    }
+
+    /* 烟花粒子 */
+    .firework-particle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      border-radius: 50%;
+      animation: firework-explode 4s ease-out infinite;
+    }
+
+    @keyframes firework-explode {
+      0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+      }
+      100% {
+        transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.3);
+        opacity: 0;
+      }
+    }
+
+    /* 中心光晕 */
+    .center-glow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 60px;
+      height: 60px;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, 
+        rgba(255, 107, 157, 0.6) 0%, 
+        rgba(196, 79, 226, 0.3) 40%, 
+        transparent 70%
+      );
+      border-radius: 50%;
+      animation: glow-pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes glow-pulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+      50% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
+    }
+
+    /* 引导文字 */
+    .guide-text {
+      position: absolute;
+      bottom: 180px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 300;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      animation: guide-fade 3s ease-in-out infinite;
+    }
+
+    @keyframes guide-fade {
+      0%, 100% { opacity: 0.35; }
+      50% { opacity: 0.7; }
+    }
+
+    /* UI 按钮 */
+    .ui-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .ui-layer > * {
+      pointer-events: auto;
+    }
+
+    /* 顶部品牌 */
+    .brand {
+      position: absolute;
+      top: 60px;
+      left: 0;
+      right: 0;
+      text-align: center;
+    }
+
+    .brand__title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px;
+      font-weight: 300;
+      color: var(--text-primary);
+      letter-spacing: 8px;
+    }
+
+    .brand__subtitle {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 4px;
+      margin-top: 6px;
+      text-transform: uppercase;
+    }
+
+    /* 底部按钮区 */
+    .bottom-actions {
+      position: absolute;
+      bottom: 50px;
+      left: 24px;
+      right: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* 按钮样式 */
+    .btn {
+      width: 52px;
+      height: 52px;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.15) 0%, 
+        rgba(255, 255, 255, 0.05) 100%
+      );
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 8px 32px rgba(107, 91, 255, 0.3);
+    }
+
+    .btn:active {
+      transform: scale(0.95);
+    }
+
+    .btn svg {
+      width: 22px;
+      height: 22px;
+      position: relative;
+      z-index: 1;
+      stroke: var(--text-primary);
+      stroke-width: 1.5;
+      fill: none;
+    }
+
+    /* 主按钮 - 发射 */
+    .btn--primary {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, var(--pink) 0%, var(--purple) 100%);
+      box-shadow: 
+        0 4px 20px rgba(255, 107, 157, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+
+    .btn--primary::before {
+      background: transparent;
+      border: none;
+    }
+
+    .btn--primary svg {
+      stroke: white;
+      stroke-width: 2;
+    }
+
+    .btn--primary:hover {
+      box-shadow: 
+        0 8px 40px rgba(255, 107, 157, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+
+    /* 烟花类型选择器 */
+    .firework-types {
+      position: absolute;
+      bottom: 130px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 12px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 30px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .type-btn {
+      width: 44px;
+      height: 44px;
+      border: none;
+      border-radius: 50%;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .type-btn::after {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      transition: border-color 0.2s ease;
+    }
+
+    .type-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .type-btn.active::after {
+      border-color: var(--purple);
+    }
+
+    .type-btn svg {
+      width: 24px;
+      height: 24px;
+      stroke: var(--text-secondary);
+      stroke-width: 1.5;
+      fill: none;
+      transition: stroke 0.2s ease;
+    }
+
+    .type-btn.active svg,
+    .type-btn:hover svg {
+      stroke: var(--text-primary);
+    }
+
+    /* 状态栏 */
+    .status-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 44px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 28px;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    /* Home Indicator */
+    .home-indicator {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 134px;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+
+    /* 设计说明面板 */
+    .design-panel {
+      width: 320px;
+      padding: 32px;
+      background: linear-gradient(145deg, 
+        rgba(20, 20, 40, 0.95) 0%, 
+        rgba(10, 10, 25, 0.98) 100%
+      );
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 
+        0 25px 80px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .design-panel__title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 24px;
+      font-weight: 300;
+      color: var(--text-primary);
+      letter-spacing: 4px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .design-section {
+      margin-bottom: 24px;
+    }
+
+    .design-section__title {
+      font-size: 11px;
+      color: var(--purple);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .design-section__content {
+      color: var(--text-secondary);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    /* 色板 */
+    .palette {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .palette__item {
+      aspect-ratio: 1;
+      border-radius: 12px;
+      display: flex;
+      align-items: flex-end;
+      padding: 8px;
+      font-size: 9px;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s ease;
+    }
+
+    .palette__item:hover {
+      transform: scale(1.1);
+    }
+
+    /* 交互列表 */
+    .interaction-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .interaction-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .interaction-item__icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--purple) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .interaction-item__text {
+      flex: 1;
+    }
+
+    .interaction-item__title {
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .interaction-item__desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* 响应式 */
+    @media (max-width: 900px) {
+      .container {
+        flex-direction: column;
+      }
+      
+      .design-panel {
+        width: 100%;
+        max-width: 375px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 手机框架 -->
+    <div class="phone-frame">
+      <!-- 游戏画布 -->
+      <div class="game-canvas">
+        <!-- 星云层 -->
+        <div class="nebula"></div>
+        
+        <!-- 星星层 -->
+        <div class="stars-layer" id="starsLayer"></div>
+        
+        <!-- 极光 -->
+        <div class="aurora"></div>
+        
+        <!-- 烟花展示 -->
+        <div class="firework-showcase" id="fireworkShowcase"></div>
+        
+        <!-- 中心光晕 -->
+        <div class="center-glow"></div>
+      </div>
+      
+      <!-- UI 层 -->
+      <div class="ui-layer">
+        <!-- 状态栏 -->
+        <div class="status-bar">
+          <span>9:41</span>
+          <span>♪</span>
+        </div>
+        
+        <!-- 品牌 -->
+        <div class="brand">
+          <div class="brand__title">星焰</div>
+          <div class="brand__subtitle">Starry Firework</div>
+        </div>
+        
+        <!-- 引导文字 -->
+        <div class="guide-text">Touch to ignite</div>
+        
+        <!-- 烟花类型选择 -->
+        <div class="firework-types">
+          <button class="type-btn active" title="球形">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>
+          </button>
+          <button class="type-btn" title="心形">
+            <svg viewBox="0 0 24 24"><path d="M12 21C12 21 4 14 4 9C4 6 6.5 4 9 4C10.5 4 11.5 4.5 12 5.5C12.5 4.5 13.5 4 15 4C17.5 4 20 6 20 9C20 14 12 21 12 21Z"/></svg>
+          </button>
+          <button class="type-btn" title="双重">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="9"/></svg>
+          </button>
+          <button class="type-btn" title="水彩">
+            <svg viewBox="0 0 24 24"><path d="M12 3C7 3 3 7 3 12C3 17 7 21 12 21C17 21 21 17 21 12C21 7 17 3 12 3Z" stroke-dasharray="2 2"/></svg>
+          </button>
+        </div>
+        
+        <!-- 底部按钮 -->
+        <div class="bottom-actions">
+          <button class="btn" title="静音">
+            <svg viewBox="0 0 24 24">
+              <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            </svg>
+          </button>
+          
+          <button class="btn btn--primary" title="发射烟花">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 2L12 8"/>
+              <path d="M12 8C12 8 8 12 8 16C8 19 10 21 12 21C14 21 16 19 16 16C16 12 12 8 12 8Z"/>
+            </svg>
+          </button>
+          
+          <button class="btn" title="分享">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/>
+              <polyline points="16 6 12 2 8 6"/>
+              <line x1="12" y1="2" x2="12" y2="15"/>
+            </svg>
+          </button>
+        </div>
+        
+        <!-- Home Indicator -->
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+    
+    <!-- 设计说明面板 -->
+    <div class="design-panel">
+      <h2 class="design-panel__title">Design System</h2>
+      
+      <div class="design-section">
+        <div class="design-section__title">Color Palette</div>
+        <div class="palette">
+          <div class="palette__item" style="background: linear-gradient(135deg, #FF6B9D, #FF8BB5);">Pink</div>
+          <div class="palette__item" style="background: linear-gradient(135deg, #C44FE2, #D66FF0);">Purple</div>
+          <div class="palette__item" style="background: linear-gradient(135deg, #6B5BFF, #8B7BFF);">Blue</div>
+          <div class="palette__item" style="background: linear-gradient(135deg, #4FC3E2, #6FD3F2);">Cyan</div>
+          <div class="palette__item" style="background: linear-gradient(135deg, #4FE2B8, #6FF2C8);">Teal</div>
+          <div class="palette__item" style="background: linear-gradient(135deg, #E2C74F, #F2D76F);">Gold</div>
+          <div class="palette__item" style="background: linear-gradient(135deg, #E27B4F, #F29B6F);">Orange</div>
+          <div class="palette__item" style="background: linear-gradient(135deg, #FF9EB5, #FFBEC5);">Light</div>
+        </div>
+      </div>
+      
+      <div class="design-section">
+        <div class="design-section__title">Typography</div>
+        <div class="design-section__content">
+          <p><strong>Display:</strong> Cormorant Garamond</p>
+          <p style="margin-top: 4px;"><strong>Body:</strong> Quicksand</p>
+        </div>
+      </div>
+      
+      <div class="design-section">
+        <div class="design-section__title">Interactions</div>
+        <div class="interaction-list">
+          <div class="interaction-item">
+            <div class="interaction-item__icon">👆</div>
+            <div class="interaction-item__text">
+              <div class="interaction-item__title">Tap</div>
+              <div class="interaction-item__desc">Launch firework</div>
+            </div>
+          </div>
+          <div class="interaction-item">
+            <div class="interaction-item__icon">✋</div>
+            <div class="interaction-item__text">
+              <div class="interaction-item__title">Hold</div>
+              <div class="interaction-item__desc">Continuous launch</div>
+            </div>
+          </div>
+          <div class="interaction-item">
+            <div class="interaction-item__icon">📱</div>
+            <div class="interaction-item__text">
+              <div class="interaction-item__title">Tilt</div>
+              <div class="interaction-item__desc">Control direction</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 生成星星
+    const starsLayer = document.getElementById('starsLayer');
+    const starCount = 80;
+    
+    for (let i = 0; i < starCount; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      
+      const size = Math.random();
+      if (size < 0.6) star.classList.add('star--small');
+      else if (size < 0.9) star.classList.add('star--medium');
+      else star.classList.add('star--large');
+      
+      if (Math.random() > 0.3) {
+        star.classList.add('star--twinkle');
+        star.style.setProperty('--duration', (2 + Math.random() * 4) + 's');
+        star.style.setProperty('--delay', (Math.random() * 3) + 's');
+      }
+      
+      star.style.left = Math.random() * 100 + '%';
+      star.style.top = Math.random() * 60 + '%';
+      
+      starsLayer.appendChild(star);
+    }
+
+    // 生成烟花粒子
+    const showcase = document.getElementById('fireworkShowcase');
+    const colors = ['#FF6B9D', '#C44FE2', '#6B5BFF', '#4FC3E2', '#4FE2B8', '#E2C74F', '#FF9EB5'];
+    
+    function createFirework() {
+      showcase.innerHTML = '';
+      const particleCount = 24;
+      const baseDelay = Math.random() * 2;
+      
+      for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'firework-particle';
+        
+        const angle = (i / particleCount) * Math.PI * 2;
+        const distance = 60 + Math.random() * 40;
+        const tx = Math.cos(angle) * distance;
+        const ty = Math.sin(angle) * distance;
+        
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const size = 4 + Math.random() * 6;
+        
+        particle.style.setProperty('--tx', tx + 'px');
+        particle.style.setProperty('--ty', ty + 'px');
+        particle.style.width = size + 'px';
+        particle.style.height = size + 'px';
+        particle.style.background = `radial-gradient(circle, ${color} 0%, transparent 70%)`;
+        particle.style.animationDelay = baseDelay + 's';
+        particle.style.animationDuration = (3 + Math.random() * 2) + 's';
+        
+        showcase.appendChild(particle);
+      }
+    }
+    
+    createFirework();
+    setInterval(createFirework, 5000);
+
+    // 类型按钮交互
+    document.querySelectorAll('.type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        createFirework();
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "description": "星空烟花沙盒 - 一款梦幻水彩风格的解压小游戏",
+  "packOptions": {
+    "ignore": []
+  },
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "newFeature": true
+  },
+  "compileType": "game",
+  "libVersion": "2.25.3",
+  "appid": "touristappid",
+  "projectname": "starry-firework",
+  "simulatorType": "wechat",
+  "simulatorPluginLibVersion": {},
+  "condition": {}
+}

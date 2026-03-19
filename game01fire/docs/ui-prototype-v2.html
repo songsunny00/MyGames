@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>星焰 · Starry Firework - 完整版</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Quicksand:wght@300;400;500&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --pink: #FF6B9D;
+      --purple: #C44FE2;
+      --blue: #6B5BFF;
+      --cyan: #4FC3E2;
+      --teal: #4FE2B8;
+      --gold: #E2C74F;
+      --orange: #E27B4F;
+      --light-pink: #FF9EB5;
+      --red: #FF4757;
+      
+      --bg-deep: #050510;
+      --bg-mid: #0a0a20;
+      --bg-light: #12122a;
+      
+      --text-primary: rgba(255, 255, 255, 0.95);
+      --text-secondary: rgba(255, 255, 255, 0.6);
+      --text-muted: rgba(255, 255, 255, 0.35);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Quicksand', 'Noto Sans SC', sans-serif;
+      background: var(--bg-deep);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow-x: hidden;
+    }
+
+    .container {
+      display: flex;
+      gap: 40px;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .phone-frame {
+      width: 375px;
+      height: 812px;
+      position: relative;
+      border-radius: 50px;
+      overflow: hidden;
+      box-shadow: 
+        0 0 0 12px #1a1a2e,
+        0 0 0 14px #2a2a4e,
+        0 50px 100px rgba(0, 0, 0, 0.8),
+        0 0 150px rgba(107, 91, 255, 0.15);
+    }
+
+    .game-canvas {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(175deg, var(--bg-deep) 0%, var(--bg-mid) 40%, var(--bg-light) 100%);
+    }
+
+    .nebula {
+      position: absolute;
+      inset: 0;
+      opacity: 0.4;
+      background: 
+        radial-gradient(ellipse 80% 50% at 20% 30%, rgba(107, 91, 255, 0.3) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 80% 20%, rgba(196, 79, 226, 0.25) 0%, transparent 50%),
+        radial-gradient(ellipse 70% 60% at 50% 70%, rgba(79, 195, 226, 0.2) 0%, transparent 50%);
+      animation: nebula-drift 20s ease-in-out infinite;
+    }
+
+    @keyframes nebula-drift {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      50% { transform: scale(1.1) rotate(2deg); }
+    }
+
+    .stars-layer { position: absolute; inset: 0; }
+
+    .star {
+      position: absolute;
+      border-radius: 50%;
+      background: white;
+    }
+
+    .star--small { width: 1px; height: 1px; box-shadow: 0 0 2px rgba(255, 255, 255, 0.8); }
+    .star--medium { width: 2px; height: 2px; box-shadow: 0 0 4px rgba(255, 255, 255, 0.9); }
+    .star--large { width: 3px; height: 3px; box-shadow: 0 0 8px rgba(255, 255, 255, 1); }
+
+    .star--twinkle {
+      animation: twinkle var(--duration, 3s) ease-in-out infinite;
+      animation-delay: var(--delay, 0s);
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    .aurora {
+      position: absolute;
+      top: 0; left: -10%; right: -10%;
+      height: 45%;
+      background: linear-gradient(180deg, rgba(107, 91, 255, 0.08) 0%, rgba(196, 79, 226, 0.12) 30%, rgba(79, 195, 226, 0.08) 60%, transparent 100%);
+      filter: blur(20px);
+      animation: aurora-wave 12s ease-in-out infinite;
+    }
+
+    @keyframes aurora-wave {
+      0%, 100% { transform: translateX(-5%) scaleY(1); }
+      33% { transform: translateX(3%) scaleY(1.15); }
+      66% { transform: translateX(-2%) scaleY(0.95); }
+    }
+
+    .firework-showcase {
+      position: absolute;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px;
+      height: 300px;
+      pointer-events: none;
+    }
+
+    .firework-particle {
+      position: absolute;
+      top: 50%; left: 50%;
+      border-radius: 50%;
+      animation: firework-explode 4s ease-out infinite;
+    }
+
+    @keyframes firework-explode {
+      0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+      10% { opacity: 1; }
+      100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.3); opacity: 0; }
+    }
+
+    .text-particle {
+      position: absolute;
+      top: 50%; left: 50%;
+      font-family: 'Noto Sans SC', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      white-space: nowrap;
+      animation: text-explode 4s ease-out infinite;
+      text-shadow: 0 0 15px currentColor, 0 0 30px currentColor;
+    }
+
+    @keyframes text-explode {
+      0% { transform: translate(-50%, -50%) scale(0) rotate(-10deg); opacity: 0; }
+      15% { opacity: 1; transform: translate(-50%, -50%) scale(1.3) rotate(0deg); }
+      100% { 
+        transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.8) rotate(var(--rot, 0deg)); 
+        opacity: 0; 
+      }
+    }
+
+    .emoji-particle {
+      position: absolute;
+      top: 50%; left: 50%;
+      font-size: 24px;
+      animation: emoji-explode 4s ease-out infinite;
+    }
+
+    @keyframes emoji-explode {
+      0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+      15% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+      100% { 
+        transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.6); 
+        opacity: 0; 
+      }
+    }
+
+    .center-glow {
+      position: absolute;
+      top: 45%; left: 50%;
+      width: 80px; height: 80px;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, rgba(255, 215, 0, 0.5) 0%, rgba(255, 107, 157, 0.3) 40%, transparent 70%);
+      border-radius: 50%;
+      animation: glow-pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes glow-pulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+      50% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
+    }
+
+    .ui-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .ui-layer > * { pointer-events: auto; }
+
+    .status-bar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 44px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 28px;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .brand {
+      position: absolute;
+      top: 55px; left: 0; right: 0;
+      text-align: center;
+    }
+
+    .brand__title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 26px;
+      font-weight: 300;
+      color: var(--text-primary);
+      letter-spacing: 8px;
+    }
+
+    .brand__subtitle {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 4px;
+      margin-top: 4px;
+      text-transform: uppercase;
+    }
+
+    .guide-text {
+      position: absolute;
+      bottom: 200px; left: 0; right: 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 300;
+      letter-spacing: 2px;
+      animation: guide-fade 3s ease-in-out infinite;
+    }
+
+    @keyframes guide-fade {
+      0%, 100% { opacity: 0.35; }
+      50% { opacity: 0.7; }
+    }
+
+    /* 烟花类型选择器 */
+    .firework-types {
+      position: absolute;
+      bottom: 130px; left: 12px; right: 12px;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 10px 6px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      scrollbar-width: none;
+    }
+
+    .firework-types::-webkit-scrollbar { display: none; }
+
+    .type-btn {
+      flex-shrink: 0;
+      width: 54px; height: 58px;
+      border: none;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .type-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .type-btn.active {
+      background: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 0 2px var(--purple);
+    }
+
+    .type-btn svg {
+      width: 22px; height: 22px;
+      stroke: var(--text-secondary);
+      stroke-width: 1.5;
+      fill: none;
+      transition: stroke 0.2s ease;
+    }
+
+    .type-btn.active svg, .type-btn:hover svg { stroke: var(--text-primary); }
+
+    .type-btn__label {
+      font-size: 8px;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+
+    .type-btn--locked {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .type-btn--locked svg { stroke: var(--text-muted); }
+
+    .type-btn--locked::after {
+      content: '🔒';
+      position: absolute;
+      top: 3px; right: 3px;
+      font-size: 9px;
+    }
+
+    .type-btn--gold {
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 165, 0, 0.15));
+      border: 1px solid rgba(255, 215, 0, 0.25);
+    }
+
+    .type-btn--gold .type-btn__label { color: #FFD700; font-weight: 500; }
+    .type-btn--gold svg { stroke: #FFD700; }
+
+    .type-btn--vip::before {
+      content: 'VIP';
+      position: absolute;
+      top: -5px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 6px;
+      font-weight: 700;
+      color: white;
+      background: linear-gradient(135deg, #FF4757, #FF6B81);
+      padding: 1px 5px;
+      border-radius: 5px;
+      letter-spacing: 0.5px;
+    }
+
+    /* 底部按钮 */
+    .bottom-actions {
+      position: absolute;
+      bottom: 45px; left: 20px; right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .btn {
+      width: 50px; height: 50px;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 8px 32px rgba(107, 91, 255, 0.3);
+    }
+
+    .btn:active { transform: scale(0.95); }
+
+    .btn svg {
+      width: 20px; height: 20px;
+      position: relative;
+      z-index: 1;
+      stroke: var(--text-primary);
+      stroke-width: 1.5;
+      fill: none;
+    }
+
+    .btn--primary {
+      width: 68px; height: 68px;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--orange) 100%);
+      box-shadow: 0 4px 20px rgba(226, 199, 79, 0.4);
+    }
+
+    .btn--primary::before { background: transparent; border: none; }
+    .btn--primary svg { stroke: white; stroke-width: 2; }
+
+    .home-indicator {
+      position: absolute;
+      bottom: 8px; left: 50%;
+      transform: translateX(-50%);
+      width: 134px; height: 5px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+
+    /* 解锁弹窗 */
+    .unlock-modal {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 100;
+    }
+
+    .unlock-modal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .unlock-card {
+      width: 300px;
+      background: linear-gradient(145deg, rgba(30, 30, 50, 0.98), rgba(15, 15, 30, 0.98));
+      border-radius: 24px;
+      padding: 32px 24px;
+      text-align: center;
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      transform: scale(0.9);
+      transition: transform 0.3s ease;
+    }
+
+    .unlock-modal.active .unlock-card { transform: scale(1); }
+
+    .unlock-card__icon { font-size: 48px; margin-bottom: 16px; }
+    .unlock-card__title { font-family: 'Noto Sans SC', sans-serif; font-size: 22px; font-weight: 700; color: #FFD700; margin-bottom: 8px; }
+    .unlock-card__desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.6; }
+
+    .unlock-options { display: flex; flex-direction: column; gap: 12px; }
+
+    .unlock-btn {
+      width: 100%;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .unlock-btn--ad { background: linear-gradient(135deg, #FFD700, #FFA500); color: #1a1a2e; }
+    .unlock-btn--ad:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255, 215, 0, 0.3); }
+
+    .unlock-btn--share { background: rgba(255, 255, 255, 0.1); color: var(--text-primary); border: 1px solid rgba(255, 255, 255, 0.2); }
+    .unlock-btn--share:hover { background: rgba(255, 255, 255, 0.15); }
+
+    .unlock-btn--close { background: transparent; color: var(--text-muted); font-size: 13px; margin-top: 8px; }
+
+    /* 设计面板 */
+    .design-panel {
+      width: 340px;
+      padding: 28px;
+      background: linear-gradient(145deg, rgba(20, 20, 40, 0.95), rgba(10, 10, 25, 0.98));
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+    }
+
+    .design-panel__title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px;
+      font-weight: 300;
+      color: var(--text-primary);
+      letter-spacing: 4px;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .design-section { margin-bottom: 20px; }
+
+    .design-section__title {
+      font-size: 10px;
+      color: var(--gold);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .firework-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .firework-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .firework-item__icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .firework-item__icon--free { background: linear-gradient(135deg, var(--pink), var(--purple)); }
+    .firework-item__icon--vip { background: linear-gradient(135deg, #FFD700, #FFA500); }
+
+    .firework-item__text { flex: 1; }
+    .firework-item__name { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+    .firework-item__desc { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+    .firework-item__tag {
+      font-size: 9px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 500;
+    }
+
+    .firework-item__tag--free { background: rgba(79, 226, 184, 0.2); color: #4FE2B8; }
+    .firework-item__tag--vip { background: rgba(255, 215, 0, 0.2); color: #FFD700; }
+
+    .unlock-info {
+      background: rgba(255, 215, 0, 0.1);
+      border-radius: 12px;
+      padding: 14px;
+      border: 1px solid rgba(255, 215, 0, 0.2);
+    }
+
+    .unlock-info__item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .unlock-info__item + .unlock-info__item { margin-top: 8px; }
+    .unlock-info__icon { font-size: 16px; }
+
+    @media (max-width: 900px) {
+      .container { flex-direction: column; }
+      .design-panel { width: 100%; max-width: 375px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="phone-frame">
+      <div class="game-canvas">
+        <div class="nebula"></div>
+        <div class="stars-layer" id="starsLayer"></div>
+        <div class="aurora"></div>
+        <div class="firework-showcase" id="fireworkShowcase"></div>
+        <div class="center-glow"></div>
+      </div>
+      
+      <div class="ui-layer">
+        <div class="status-bar">
+          <span>9:41</span>
+          <span>♪</span>
+        </div>
+        
+        <div class="brand">
+          <div class="brand__title">星焰</div>
+          <div class="brand__subtitle">Starry Firework</div>
+        </div>
+        
+        <div class="guide-text">Touch to ignite ✨</div>
+        
+        <div class="firework-types" id="fireworkTypes">
+          <button class="type-btn active" data-type="heart" data-unlocked="true">
+            <svg viewBox="0 0 24 24"><path d="M12 21C12 21 4 14 4 9C4 6 6.5 4 9 4C10.5 4 11.5 4.5 12 5.5C12.5 4.5 13.5 4 15 4C17.5 4 20 6 20 9C20 14 12 21 12 21Z"/></svg>
+            <span class="type-btn__label">心形</span>
+          </button>
+          <button class="type-btn" data-type="double" data-unlocked="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="8"/></svg>
+            <span class="type-btn__label">双重</span>
+          </button>
+          <button class="type-btn" data-type="watercolor" data-unlocked="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" stroke-dasharray="3 2"/></svg>
+            <span class="type-btn__label">水彩</span>
+          </button>
+          <button class="type-btn" data-type="meteor" data-unlocked="true">
+            <svg viewBox="0 0 24 24"><path d="M4 20L8 16"/><path d="M8 16L16 8"/><path d="M16 8L20 4"/><circle cx="19" cy="5" r="2"/></svg>
+            <span class="type-btn__label">流星</span>
+          </button>
+          <button class="type-btn type-btn--gold type-btn--locked type-btn--vip" data-type="baofu" data-unlocked="false">
+            <svg viewBox="0 0 24 24"><text x="12" y="16" text-anchor="middle" font-size="10" fill="none" stroke="#FFD700" stroke-width="1">暴富</text></svg>
+            <span class="type-btn__label">暴富</span>
+          </button>
+          <button class="type-btn type-btn--gold type-btn--locked type-btn--vip" data-type="chenggong" data-unlocked="false">
+            <svg viewBox="0 0 24 24"><text x="12" y="16" text-anchor="middle" font-size="9" fill="none" stroke="#FFD700" stroke-width="1">成功</text></svg>
+            <span class="type-btn__label">成功</span>
+          </button>
+          <button class="type-btn type-btn--gold type-btn--locked type-btn--vip" data-type="cupid" data-unlocked="false">
+            <svg viewBox="0 0 24 24"><path d="M12 21C12 21 4 14 4 9C4 6 6.5 4 9 4C10.5 4 11.5 4.5 12 5.5C12.5 4.5 13.5 4 15 4C17.5 4 20 6 20 9C20 14 12 21 12 21Z" stroke="#FF69B4"/><path d="M17 5L20 2M20 2L20 5M20 2L17 2" stroke="#FF69B4"/></svg>
+            <span class="type-btn__label">丘比特</span>
+          </button>
+          <button class="type-btn type-btn--gold type-btn--locked type-btn--vip" data-type="jinli" data-unlocked="false">
+            <svg viewBox="0 0 24 24"><text x="12" y="16" text-anchor="middle" font-size="10" fill="none" stroke="#FFD700" stroke-width="1">锦鲤</text></svg>
+            <span class="type-btn__label">锦鲤</span>
+          </button>
+        </div>
+        
+        <div class="bottom-actions">
+          <button class="btn" title="静音">
+            <svg viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+          </button>
+          <button class="btn btn--primary" id="launchBtn" title="发射烟花">
+            <svg viewBox="0 0 24 24"><path d="M12 2L12 6"/><path d="M12 6C12 6 7 10 7 15C7 18.5 9.5 21 12 21C14.5 21 17 18.5 17 15C17 10 12 6 12 6Z"/></svg>
+          </button>
+          <button class="btn" title="分享">
+            <svg viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          </button>
+        </div>
+        
+        <div class="home-indicator"></div>
+      </div>
+      
+      <div class="unlock-modal" id="unlockModal">
+        <div class="unlock-card">
+          <div class="unlock-card__icon">🎁</div>
+          <div class="unlock-card__title">解锁专属烟花</div>
+          <div class="unlock-card__desc">观看广告或分享给好友<br>即可解锁此烟花类型</div>
+          <div class="unlock-options">
+            <button class="unlock-btn unlock-btn--ad" id="watchAdBtn">📺 观看广告解锁</button>
+            <button class="unlock-btn unlock-btn--share" id="shareUnlockBtn">🎉 分享给好友解锁</button>
+            <button class="unlock-btn unlock-btn--close" id="closeModalBtn">稍后再说</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="design-panel">
+      <h2 class="design-panel__title">烟花类型</h2>
+      
+      <div class="design-section">
+        <div class="design-section__title">免费类型</div>
+        <div class="firework-list">
+          <div class="firework-item">
+            <div class="firework-item__icon firework-item__icon--free">💗</div>
+            <div class="firework-item__text">
+              <div class="firework-item__name">心形烟花</div>
+              <div class="firework-item__desc">浪漫爱心绽放</div>
+            </div>
+            <span class="firework-item__tag firework-item__tag--free">免费</span>
+          </div>
+          <div class="firework-item">
+            <div class="firework-item__icon firework-item__icon--free">◎</div>
+            <div class="firework-item__text">
+              <div class="firework-item__name">双重烟花</div>
+              <div class="firework-item__desc">连环爆炸效果</div>
+            </div>
+            <span class="firework-item__tag firework-item__tag--free">免费</span>
+          </div>
+          <div class="firework-item">
+            <div class="firework-item__icon firework-item__icon--free">🎨</div>
+            <div class="firework-item__text">
+              <div class="firework-item__name">水彩烟花</div>
+              <div class="firework-item__desc">梦幻晕染效果</div>
+            </div>
+            <span class="firework-item__tag firework-item__tag--free">免费</span>
+          </div>
+          <div class="firework-item">
+            <div class="firework-item__icon firework-item__icon--free">☄️</div>
+            <div class="firework-item__text">
+              <div class="firework-item__name">流星烟花</div>
+              <div class="firework-item__desc">划过星空的流星</div>
+            </div>
+            <span class="firework-item__tag firework-item__tag--free">免费</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="design-section">
+        <div class="design-section__title">VIP专属</div>
+        <div class="firework-list">
+          <div class="firework-item">
+            <div class="firework-item__icon firework-item__icon--vip">💎</div>
+            <div class="firework-item__text">
+              <div class="firework-item__name">暴富烟花</div>
+              <div class="firework-item__desc">"暴富"文字绽放</div>
+            </div>
+            <span class="firework-item__tag firework-item__tag--vip">解锁</span>
+          </div>
+          <div class="firework-item">
+            <div class="firework-item__icon firework-item__icon--vip">🎯</div>
+            <div class="firework-item__text">
+              <div class="firework-item__name">马上成功</div>
+              <div class="firework-item__desc">"成功"文字绽放</div>
+            </div>
+            <span class="firework-item__tag firework-item__tag--vip">解锁</span>
+          </div>
+          <div class="firework-item">
+            <div class="firework-item__icon firework-item__icon--vip">💘</div>
+            <div class="firework-item__text">
+              <div class="firework-item__name">丘比特烟花</div>
+              <div class="firework-item__desc">粉色爱心雨特效</div>
+            </div>
+            <span class="firework-item__tag firework-item__tag--vip">解锁</span>
+          </div>
+          <div class="firework-item">
+            <div class="firework-item__icon firework-item__icon--vip">🐟</div>
+            <div class="firework-item__text">
+              <div class="firework-item__name">锦鲤烟花</div>
+              <div class="firework-item__desc">"锦鲤"文字绽放</div>
+            </div>
+            <span class="firework-item__tag firework-item__tag--vip">解锁</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="design-section">
+        <div class="design-section__title">解锁方式</div>
+        <div class="unlock-info">
+          <div class="unlock-info__item">
+            <span class="unlock-info__icon">📺</span>
+            <span>观看15秒广告视频</span>
+          </div>
+          <div class="unlock-info__item">
+            <span class="unlock-info__icon">🎉</span>
+            <span>分享给好友或朋友圈</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 生成星星
+    const starsLayer = document.getElementById('starsLayer');
+    for (let i = 0; i < 60; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      const size = Math.random();
+      if (size < 0.6) star.classList.add('star--small');
+      else if (size < 0.9) star.classList.add('star--medium');
+      else star.classList.add('star--large');
+      if (Math.random() > 0.3) {
+        star.classList.add('star--twinkle');
+        star.style.setProperty('--duration', (2 + Math.random() * 4) + 's');
+        star.style.setProperty('--delay', (Math.random() * 3) + 's');
+      }
+      star.style.left = Math.random() * 100 + '%';
+      star.style.top = Math.random() * 50 + '%';
+      starsLayer.appendChild(star);
+    }
+
+    const showcase = document.getElementById('fireworkShowcase');
+    const colors = ['#FF6B9D', '#C44FE2', '#6B5BFF', '#4FC3E2', '#4FE2B8', '#E2C74F', '#FF9EB5', '#FFD700'];
+    const goldColors = ['#FFD700', '#FFA500', '#FF6347', '#FFEC8B', '#FFD700'];
+    const pinkColors = ['#FF69B4', '#FF1493', '#FFB6C1', '#FFC0CB', '#FF6B9D'];
+    
+    let currentType = 'heart';
+    
+    function createFirework(type = 'heart') {
+      showcase.innerHTML = '';
+      switch(type) {
+        case 'heart': createHeartFirework(); break;
+        case 'double': createDoubleFirework(); break;
+        case 'watercolor': createWatercolorFirework(); break;
+        case 'meteor': createMeteorFirework(); break;
+        case 'baofu': createTextFirework('暴富', goldColors); break;
+        case 'chenggong': createTextFirework('成功', goldColors); break;
+        case 'cupid': createCupidFirework(); break;
+        case 'jinli': createTextFirework('锦鲤', goldColors); break;
+        default: createHeartFirework();
+      }
+    }
+    
+    function createMeteorFirework() {
+      const baseDelay = Math.random() * 2;
+      const meteorColors = ['#FFFFFF', '#87CEEB', '#FFD700', '#FF69B4'];
+      
+      // 主流星尾迹
+      for (let i = 0; i < 20; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'firework-particle';
+        const angle = -Math.PI / 3 + (Math.random() - 0.5) * 0.5;
+        const distance = 30 + Math.random() * 50;
+        particle.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+        particle.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+        particle.style.width = (3 + Math.random() * 4) + 'px';
+        particle.style.height = particle.style.width;
+        particle.style.background = `radial-gradient(circle, ${meteorColors[Math.floor(Math.random() * meteorColors.length)]} 0%, transparent 70%)`;
+        particle.style.animationDelay = baseDelay + 's';
+        particle.style.animationDuration = (2 + Math.random() * 2) + 's';
+        showcase.appendChild(particle);
+      }
+      
+      // 星光闪烁
+      for (let i = 0; i < 15; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'firework-particle';
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 20 + Math.random() * 40;
+        particle.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+        particle.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+        particle.style.width = (2 + Math.random() * 2) + 'px';
+        particle.style.height = particle.style.width;
+        particle.style.background = `radial-gradient(circle, #FFFFFF 0%, transparent 70%)`;
+        particle.style.animationDelay = baseDelay + 's';
+        particle.style.animationDuration = (2.5 + Math.random()) + 's';
+        showcase.appendChild(particle);
+      }
+    }
+    
+    function createTextFirework(text, colorPalette) {
+      const chars = text.split('');
+      const charCount = chars.length;
+      const baseDelay = Math.random() * 2;
+      
+      chars.forEach((char, i) => {
+        const particle = document.createElement('div');
+        particle.className = 'text-particle';
+        particle.textContent = char;
+        const angle = (i / charCount) * Math.PI * 2 - Math.PI / 2;
+        const distance = 45 + Math.random() * 15;
+        particle.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+        particle.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+        particle.style.setProperty('--rot', (Math.random() * 30 - 15) + 'deg');
+        particle.style.color = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+        particle.style.animationDelay = baseDelay + 's';
+        particle.style.animationDuration = (3.5 + Math.random()) + 's';
+        showcase.appendChild(particle);
+      });
+      
+      for (let i = 0; i < 15; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'firework-particle';
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 60 + Math.random() * 40;
+        particle.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+        particle.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+        particle.style.width = (2 + Math.random() * 3) + 'px';
+        particle.style.height = particle.style.width;
+        particle.style.background = `radial-gradient(circle, ${colorPalette[Math.floor(Math.random() * colorPalette.length)]} 0%, transparent 70%)`;
+        particle.style.animationDelay = baseDelay + 's';
+        particle.style.animationDuration = (2.5 + Math.random()) + 's';
+        showcase.appendChild(particle);
+      }
+    }
+    
+    function createCupidFirework() {
+      const baseDelay = Math.random() * 2;
+      
+      // 主心形
+      for (let i = 0; i < 35; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'firework-particle';
+        const t = (i / 35) * Math.PI * 2;
+        const heartX = 16 * Math.pow(Math.sin(t), 3);
+        const heartY = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+        particle.style.setProperty('--tx', heartX * 2.8 + 'px');
+        particle.style.setProperty('--ty', heartY * 2.8 + 'px');
+        particle.style.width = (4 + Math.random() * 3) + 'px';
+        particle.style.height = particle.style.width;
+        particle.style.background = `radial-gradient(circle, ${pinkColors[Math.floor(Math.random() * pinkColors.length)]} 0%, transparent 70%)`;
+        particle.style.animationDelay = baseDelay + 's';
+        showcase.appendChild(particle);
+      }
+      
+      // 小爱心散落
+      for (let i = 0; i < 12; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'emoji-particle';
+        particle.textContent = '💗';
+        const angle = (i / 12) * Math.PI * 2;
+        const distance = 50 + Math.random() * 30;
+        particle.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+        particle.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+        particle.style.animationDelay = baseDelay + 's';
+        particle.style.animationDuration = (3 + Math.random()) + 's';
+        showcase.appendChild(particle);
+      }
+    }
+    
+    function createHeartFirework() {
+      const particleCount = 30;
+      const baseDelay = Math.random() * 2;
+      for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'firework-particle';
+        const t = (i / particleCount) * Math.PI * 2;
+        const heartX = 16 * Math.pow(Math.sin(t), 3);
+        const heartY = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+        particle.style.setProperty('--tx', heartX * 3 + 'px');
+        particle.style.setProperty('--ty', heartY * 3 + 'px');
+        particle.style.width = (3 + Math.random() * 3) + 'px';
+        particle.style.height = particle.style.width;
+        particle.style.background = `radial-gradient(circle, #FF6B9D 0%, transparent 70%)`;
+        particle.style.animationDelay = baseDelay + 's';
+        showcase.appendChild(particle);
+      }
+    }
+    
+    function createDoubleFirework() {
+      const particleCount = 15;
+      const baseDelay = Math.random() * 2;
+      
+      // 第一次爆炸
+      for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'firework-particle';
+        const angle = (i / particleCount) * Math.PI * 2;
+        const distance = 40 + Math.random() * 20;
+        particle.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+        particle.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+        particle.style.width = (3 + Math.random() * 3) + 'px';
+        particle.style.height = particle.style.width;
+        particle.style.background = `radial-gradient(circle, ${colors[Math.floor(Math.random() * colors.length)]} 0%, transparent 70%)`;
+        particle.style.animationDelay = baseDelay + 's';
+        showcase.appendChild(particle);
+      }
+      
+      // 第二次爆炸
+      setTimeout(() => {
+        for (let i = 0; i < particleCount; i++) {
+          const particle = document.createElement('div');
+          particle.className = 'firework-particle';
+          const angle = (i / particleCount) * Math.PI * 2;
+          const distance = 30 + Math.random() * 15;
+          particle.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+          particle.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+          particle.style.width = (2 + Math.random() * 2) + 'px';
+          particle.style.height = particle.style.width;
+          particle.style.background = `radial-gradient(circle, ${colors[Math.floor(Math.random() * colors.length)]} 0%, transparent 70%)`;
+          particle.style.animationDelay = '0s';
+          showcase.appendChild(particle);
+        }
+      }, 500);
+    }
+    
+    function createWatercolorFirework() {
+      for (let layer = 0; layer < 3; layer++) {
+        for (let i = 0; i < 8; i++) {
+          const particle = document.createElement('div');
+          particle.className = 'firework-particle';
+          const angle = Math.random() * Math.PI * 2;
+          const distance = 30 + layer * 20 + Math.random() * 20;
+          particle.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+          particle.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+          particle.style.width = (6 + layer * 3) + 'px';
+          particle.style.height = particle.style.width;
+          particle.style.background = `radial-gradient(circle, ${colors[layer % colors.length]}80 0%, transparent 70%)`;
+          particle.style.animationDelay = (layer * 0.3) + 's';
+          showcase.appendChild(particle);
+        }
+      }
+    }
+    
+    createFirework('heart');
+    setInterval(() => createFirework(currentType), 5000);
+
+    const typeButtons = document.querySelectorAll('.type-btn');
+    const unlockModal = document.getElementById('unlockModal');
+    
+    typeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const isUnlocked = btn.dataset.unlocked === 'true';
+        if (!isUnlocked) {
+          unlockModal.classList.add('active');
+          unlockModal.dataset.targetType = btn.dataset.type;
+        } else {
+          typeButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentType = btn.dataset.type;
+          createFirework(currentType);
+        }
+      });
+    });
+    
+    document.getElementById('watchAdBtn').addEventListener('click', () => {
+      alert('📺 模拟观看广告...\n\n实际游戏中会播放15秒广告视频');
+      unlockType();
+    });
+    
+    document.getElementById('shareUnlockBtn').addEventListener('click', () => {
+      alert('🎉 模拟分享...\n\n实际游戏中会调用微信分享API');
+      unlockType();
+    });
+    
+    document.getElementById('closeModalBtn').addEventListener('click', () => {
+      unlockModal.classList.remove('active');
+    });
+    
+    function unlockType() {
+      const targetType = unlockModal.dataset.targetType;
+      const targetBtn = document.querySelector(`[data-type="${targetType}"]`);
+      if (targetBtn) {
+        targetBtn.dataset.unlocked = 'true';
+        targetBtn.classList.remove('type-btn--locked');
+        targetBtn.classList.add('active');
+        typeButtons.forEach(b => b.classList.remove('active'));
+        targetBtn.classList.add('active');
+        currentType = targetType;
+        createFirework(currentType);
+      }
+      unlockModal.classList.remove('active');
+    }
+    
+    document.getElementById('launchBtn').addEventListener('click', () => {
+      createFirework(currentType);
+    });
+  </script>
+</body>
+</html>
