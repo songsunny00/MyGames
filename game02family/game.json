@@ -1,0 +1,10 @@
+{
+  "deviceOrientation": "portrait",
+  "networkTimeout": {
+    "request": 5000,
+    "downloadFile": 10000
+  },
+  "plugins": {},
+  "subpackages": [],
+  "main": "game.js"
+}

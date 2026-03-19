@@ -1,0 +1,12 @@
+{
+  "miniprogramRoot": "./",
+  "setting": {
+    "es6": true,
+    "postcss": true,
+    "minified": true
+  },
+  "compileType": "game",
+  "appid": "你的AppID",
+  "projectname": "qingming-memorial",
+  "libVersion": "2.25.3"
+}
