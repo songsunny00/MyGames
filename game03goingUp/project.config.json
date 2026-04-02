@@ -1,0 +1,26 @@
+{
+  "miniprogramRoot": "",
+  "setting": {
+    "es6": true,
+    "postcss": true,
+    "minified": true,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    }
+  },
+  "compileType": "game",
+  "appid": "wxfe57471edcfb2931",
+  "projectname": "going-up",
+  "libVersion": "3.15.0",
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  },
+  "condition": {},
+  "editorSetting": {
+    "tabIndent": "insertSpaces",
+    "tabSize": 2
+  }
+}

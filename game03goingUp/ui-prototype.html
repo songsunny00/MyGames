@@ -1,0 +1,2205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>爬楼 Going Up — UI原型</title>
+    <style>
+        /* ============================================================
+           设计令牌 Design Tokens
+           风格：柔和清新、卡通可爱、暖色调（黄/粉/米）、圆角
+        ============================================================ */
+        :root {
+            /* 主色 */
+            --cream:       #FFF8E7;      /* 米色底 */
+            --cream-dark:  #FFF0C8;      /* 深一档米色 */
+            --yellow:      #FFD84D;      /* 主黄 */
+            --yellow-deep: #FFC107;      /* 深黄 */
+            --pink:        #FFB3C6;      /* 主粉 */
+            --pink-deep:   #FF8FAB;      /* 深粉 */
+            --peach:       #FFCBA4;      /* 桃色 */
+            --peach-deep:  #FF9F6A;      /* 深桃 */
+
+            /* 功能色 */
+            --green:       #56C596;      /* 答对/成功 */
+            --green-light: #A8F0CF;
+            --red:         #FF6B6B;      /* 答错/危险 */
+            --red-light:   #FFB3B3;
+            --bomb-dark:   #3D3D3D;      /* 炸弹 */
+
+            /* 中性 */
+            --text-primary:   #3D2B1F;
+            --text-secondary: #8B6E5A;
+            --text-hint:      #C4A882;
+            --white:          #FFFFFF;
+            --shadow-sm:      0 2px 8px rgba(0,0,0,.08);
+            --shadow-md:      0 6px 20px rgba(0,0,0,.12);
+            --shadow-lg:      0 12px 40px rgba(0,0,0,.16);
+
+            /* 圆角 */
+            --r-sm:  12px;
+            --r-md:  20px;
+            --r-lg:  28px;
+            --r-xl:  36px;
+            --r-pill: 999px;
+
+            /* 间距 */
+            --sp1: 4px; --sp2: 8px; --sp3: 12px; --sp4: 16px;
+            --sp5: 20px; --sp6: 24px; --sp8: 32px; --sp10: 40px;
+
+            /* 动效 */
+            --ease-out: cubic-bezier(.2,.6,.3,1);
+            --ease-spring: cubic-bezier(.34,1.56,.64,1);
+        }
+
+        /* ============================================================
+           Reset & Base
+        ============================================================ */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
+                         'Microsoft YaHei', 'Segoe UI', sans-serif;
+            background: #E8DDD0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* 手机容器 */
+        #app {
+            width: 375px;
+            height: 812px;
+            background: var(--cream);
+            border-radius: 40px;
+            box-shadow: 0 30px 80px rgba(0,0,0,.3);
+            position: relative;
+            overflow: hidden;
+            /* 桌面预览：也允许滚动看页面 */
+        }
+
+        /* ============================================================
+           通用组件
+        ============================================================ */
+
+        /* 按钮 */
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--sp2);
+            padding: var(--sp4) var(--sp8);
+            border: none;
+            border-radius: var(--r-pill);
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 150ms var(--ease-spring), box-shadow 150ms;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 52px;
+        }
+        .btn:active { transform: scale(.96); box-shadow: none; }
+
+        .btn-yellow {
+            background: var(--yellow);
+            color: var(--text-primary);
+            box-shadow: 0 4px 0 var(--yellow-deep), var(--shadow-sm);
+        }
+        .btn-yellow:active { transform: scale(.96) translateY(2px); box-shadow: 0 2px 0 var(--yellow-deep); }
+
+        .btn-pink {
+            background: var(--pink-deep);
+            color: var(--white);
+            box-shadow: 0 4px 0 #E0607A, var(--shadow-sm);
+        }
+        .btn-pink:active { transform: scale(.96) translateY(2px); box-shadow: 0 2px 0 #E0607A; }
+
+        .btn-white {
+            background: var(--white);
+            color: var(--text-primary);
+            border: 2px solid var(--cream-dark);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 2px solid var(--peach);
+        }
+
+        /* 遮罩弹窗底层 */
+        .modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(61, 43, 31, .45);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 200ms;
+        }
+        .modal-backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* 弹窗卡片 */
+        .modal-card {
+            background: var(--white);
+            border-radius: var(--r-xl);
+            padding: var(--sp8) var(--sp6);
+            width: 88%;
+            max-width: 320px;
+            box-shadow: var(--shadow-lg);
+            transform: scale(.88) translateY(20px);
+            transition: transform 250ms var(--ease-spring);
+        }
+        .modal-backdrop.active .modal-card {
+            transform: scale(1) translateY(0);
+        }
+
+        /* 页面切换 */
+        .screen {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 300ms;
+        }
+        .screen.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* ============================================================
+           1. 启动闪屏 Splash
+        ============================================================ */
+        #screen-splash {
+            background: linear-gradient(160deg, #FFF0C8 0%, #FFE4A3 60%, #FFD4C2 100%);
+            align-items: center;
+            justify-content: center;
+            gap: var(--sp5);
+            z-index: 50;
+        }
+
+        .splash-building {
+            position: relative;
+            width: 160px;
+            height: 200px;
+        }
+        /* 用CSS绘制简单楼宇剪影 */
+        .splash-building::before {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 30px;
+            width: 100px; height: 180px;
+            background: linear-gradient(180deg, #FFEAA7 0%, #FDD789 100%);
+            border-radius: 12px 12px 0 0;
+            box-shadow: inset -4px 0 8px rgba(0,0,0,.06);
+        }
+        .splash-windows {
+            position: absolute;
+            bottom: 20px; left: 46px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            width: 68px;
+        }
+        .splash-window {
+            width: 14px; height: 14px;
+            background: var(--yellow);
+            border-radius: 3px;
+        }
+        .splash-window.lit { background: #FFE066; box-shadow: 0 0 6px #FFD700; }
+        .splash-char {
+            position: absolute;
+            bottom: 100px; left: 50%;
+            transform: translateX(-50%);
+            font-size: 40px;
+            animation: splashBounce 1s var(--ease-spring) infinite;
+            z-index: 1;
+        }
+
+        @keyframes splashBounce {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50%       { transform: translateX(-50%) translateY(-14px); }
+        }
+
+        .splash-logo {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--sp2);
+        }
+        .splash-title {
+            font-size: 40px;
+            font-weight: 900;
+            color: var(--text-primary);
+            letter-spacing: -1px;
+        }
+        .splash-subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .splash-tagline {
+            font-size: 13px;
+            color: var(--text-hint);
+            margin-top: 4px;
+        }
+        .splash-loader {
+            width: 48px;
+            height: 6px;
+            background: var(--cream-dark);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: var(--sp5);
+        }
+        .splash-loader-bar {
+            height: 100%;
+            background: var(--yellow);
+            border-radius: 3px;
+            animation: loadBar 2s var(--ease-out) forwards;
+        }
+        @keyframes loadBar {
+            from { width: 0%; }
+            to   { width: 100%; }
+        }
+
+        /* ============================================================
+           2. 开始界面 Start
+        ============================================================ */
+        #screen-start {
+            background: linear-gradient(180deg, #FFF8E7 0%, #FFF0C8 100%);
+            overflow: hidden;
+        }
+
+        /* 装饰楼梯背景 */
+        .start-stairs-bg {
+            position: absolute;
+            bottom: 0; right: -10px;
+            width: 220px;
+            height: 300px;
+            opacity: .18;
+        }
+        .stair-step {
+            position: absolute;
+            height: 28px;
+            background: var(--pink-deep);
+            border-radius: 6px 6px 0 0;
+        }
+
+        .start-header {
+            padding: var(--sp10) var(--sp8) var(--sp4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--sp3);
+            flex: 1;
+            justify-content: center;
+        }
+
+        .start-game-icon {
+            font-size: 72px;
+            animation: startFloat 2.5s ease-in-out infinite;
+            filter: drop-shadow(0 8px 16px rgba(0,0,0,.12));
+        }
+        @keyframes startFloat {
+            0%, 100% { transform: translateY(0) rotate(-2deg); }
+            50%       { transform: translateY(-12px) rotate(2deg); }
+        }
+
+        .start-title {
+            font-size: 44px;
+            font-weight: 900;
+            color: var(--text-primary);
+            text-align: center;
+            line-height: 1.1;
+        }
+        .start-title span { color: var(--pink-deep); }
+
+        .start-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-align: center;
+            line-height: 1.6;
+            max-width: 260px;
+        }
+
+        .start-stats {
+            display: flex;
+            gap: var(--sp4);
+            margin: var(--sp3) 0;
+        }
+        .stat-chip {
+            background: var(--white);
+            border-radius: var(--r-pill);
+            padding: var(--sp2) var(--sp4);
+            display: flex;
+            align-items: center;
+            gap: var(--sp2);
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            box-shadow: var(--shadow-sm);
+        }
+        .stat-chip span { font-size: 16px; }
+
+        .start-actions {
+            padding: var(--sp6) var(--sp8) var(--sp10);
+            display: flex;
+            flex-direction: column;
+            gap: var(--sp3);
+        }
+
+        .btn-start-main {
+            background: linear-gradient(135deg, var(--yellow) 0%, var(--peach) 100%);
+            color: var(--text-primary);
+            font-size: 20px;
+            font-weight: 900;
+            padding: var(--sp5) var(--sp8);
+            border-radius: var(--r-pill);
+            border: none;
+            box-shadow: 0 6px 0 #E8B020, 0 8px 20px rgba(255,200,50,.4);
+            cursor: pointer;
+            transition: transform 150ms var(--ease-spring), box-shadow 150ms;
+            min-height: 60px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--sp2);
+            letter-spacing: .5px;
+        }
+        .btn-start-main:active {
+            transform: scale(.97) translateY(3px);
+            box-shadow: 0 3px 0 #E8B020, 0 4px 10px rgba(255,200,50,.3);
+        }
+
+        /* ============================================================
+           3. 游戏说明 Tutorial
+        ============================================================ */
+        #screen-tutorial {
+            background: var(--cream);
+        }
+        .tutorial-header {
+            background: linear-gradient(135deg, var(--yellow) 0%, var(--peach) 100%);
+            padding: var(--sp8) var(--sp6) var(--sp6);
+            border-radius: 0 0 var(--r-xl) var(--r-xl);
+        }
+        .tutorial-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+        .tutorial-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: var(--sp1);
+        }
+        .tutorial-body {
+            padding: var(--sp6);
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: var(--sp4);
+        }
+        .tutorial-item {
+            background: var(--white);
+            border-radius: var(--r-md);
+            padding: var(--sp4) var(--sp5);
+            display: flex;
+            align-items: flex-start;
+            gap: var(--sp4);
+            box-shadow: var(--shadow-sm);
+        }
+        .tutorial-icon {
+            font-size: 32px;
+            flex-shrink: 0;
+            width: 48px;
+            height: 48px;
+            background: var(--cream);
+            border-radius: var(--r-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .tutorial-text h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        .tutorial-text p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        .tutorial-footer {
+            padding: var(--sp4) var(--sp6) var(--sp8);
+        }
+
+        /* ============================================================
+           4. 游戏主界面 Game
+           背景：天蓝色（参考图）
+           楼梯：Z字型 2.5D 等轴风格
+        ============================================================ */
+        /* ── 游戏主界面：天空渐变背景（更通透、更有光感） ── */
+        #screen-game {
+            background: linear-gradient(180deg,
+                #5BB8F5 0%,
+                #8ED4F8 28%,
+                #B8E8FA 55%,
+                #D8F2FC 78%,
+                #E8F8F0 100%
+            );
+            overflow: hidden;
+        }
+        /* 背景光晕装饰（纯CSS，无额外DOM） */
+        #screen-game::before {
+            content: '';
+            position: absolute;
+            top: -80px; left: -60px;
+            width: 280px; height: 280px;
+            background: radial-gradient(circle, rgba(255,255,220,.28) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 1;
+        }
+        #screen-game::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 90px;
+            background: linear-gradient(180deg, transparent 0%, rgba(180,230,190,.35) 100%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* ── HUD 容器 ── */
+        .game-hud {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            padding: 16px 14px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        /* ── 暂停按钮：白色圆形，投影更强 ── */
+        .hud-pause {
+            background: #FFFFFF;
+            border: none;
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 3px 0 rgba(0,0,0,.12), 0 6px 16px rgba(60,120,200,.18);
+            flex-shrink: 0;
+            transition: transform 100ms var(--ease-spring), box-shadow 100ms ease;
+        }
+        .hud-pause:active {
+            transform: scale(.88) translateY(2px);
+            box-shadow: 0 1px 0 rgba(0,0,0,.12), 0 2px 8px rgba(60,120,200,.12);
+        }
+        .hud-pause-icon { display: flex; gap: 4px; align-items: center; }
+        .hud-pause-bar {
+            width: 4px; height: 15px;
+            background: #3A87D4;
+            border-radius: 2px;
+        }
+
+        /* ── 楼层胶囊：白底 + 橙色楼层数（与楼梯主色呼应） ── */
+        .hud-floor-pill {
+            background: #FFFFFF;
+            border-radius: var(--r-pill);
+            padding: 6px 16px;
+            display: flex;
+            align-items: baseline;
+            gap: 3px;
+            box-shadow: 0 3px 0 rgba(0,0,0,.10), 0 6px 18px rgba(60,120,200,.14);
+        }
+        .hud-floor-label-text {
+            font-size: 10px;
+            color: #AAC4DC;
+            font-weight: 700;
+            letter-spacing: .6px;
+            text-transform: uppercase;
+            align-self: center;
+            margin-right: 2px;
+        }
+        .hud-floor-current {
+            font-size: 28px;
+            font-weight: 900;
+            color: #F59500;           /* 橙色呼应楼梯 */
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+            text-shadow: 0 2px 0 rgba(200,100,0,.15);
+        }
+        .hud-floor-sep {
+            font-size: 13px;
+            color: #C8D8E8;
+            font-weight: 400;
+            align-self: center;
+        }
+        .hud-floor-total {
+            font-size: 13px;
+            color: #A0C0D8;
+            font-weight: 700;
+            align-self: center;
+        }
+
+        /* ── 收集胶囊：白底 + 金色 ── */
+        .hud-collection {
+            background: #FFFFFF;
+            border-radius: var(--r-pill);
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            box-shadow: 0 3px 0 rgba(0,0,0,.10), 0 6px 18px rgba(200,140,0,.14);
+            transition: transform 120ms var(--ease-spring), box-shadow 120ms ease;
+            flex-shrink: 0;
+        }
+        .hud-collection:active {
+            transform: scale(.88) translateY(2px);
+            box-shadow: 0 1px 0 rgba(0,0,0,.10), 0 2px 8px rgba(200,140,0,.10);
+        }
+        .hud-collection-count {
+            font-size: 14px;
+            font-weight: 900;
+            color: #D4870A;
+        }
+
+        /* ── 游戏画布 ── */
+        .game-canvas {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            z-index: 2;
+        }
+
+        /* ── 云朵层 ── */
+        .cloud-layer {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        /* ── Z字型等轴楼梯（SVG绘制） ── */
+        .stair-svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ── 角色：白色圆形+棕帽（参考图风格） ── */
+        .character {
+            position: absolute;
+            width: 58px;
+            height: 72px;
+            z-index: 5;
+            animation: charBob 0.6s cubic-bezier(.36,.07,.19,.97) infinite;
+            filter: drop-shadow(0 6px 8px rgba(160,100,0,.22));
+        }
+        @keyframes charBob {
+            0%, 100% { transform: translateY(0) scaleY(1); }
+            45%       { transform: translateY(-9px) scaleY(1.04); }
+            55%       { transform: translateY(-9px) scaleY(1.04); }
+            80%       { transform: translateY(1px) scaleY(.96); }
+        }
+
+        /* ── 障碍物 ❓ — 红色大圆角方块（参考图风格：更大更圆） ── */
+        .obstacle {
+            position: absolute;
+            width: 52px; height: 52px;
+            background: linear-gradient(160deg, #FF5252 0%, #E53030 100%);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* 3D立体效果：底部深色 + 顶部高光 */
+            box-shadow:
+                0 6px 0 #C02020,
+                0 10px 24px rgba(220,40,40,.38),
+                inset 0 2px 3px rgba(255,180,180,.4);
+            animation: obstacleFloat 1s cubic-bezier(.36,.07,.19,.97) infinite;
+            z-index: 6;
+            cursor: pointer;
+            touch-action: manipulation;
+            transition: transform 80ms ease, box-shadow 80ms ease;
+        }
+        .obstacle:active {
+            transform: translateY(4px) scale(.94);
+            box-shadow: 0 2px 0 #C02020, 0 4px 12px rgba(220,40,40,.3), inset 0 1px 2px rgba(255,180,180,.4);
+        }
+        @keyframes obstacleFloat {
+            0%, 100% { transform: translateY(0); }
+            50%       { transform: translateY(-9px); }
+        }
+
+        /* ── 礼包 SVG图标 ── */
+        .gift-item {
+            position: absolute;
+            width: 52px; height: 52px;
+            z-index: 6;
+            cursor: pointer;
+            touch-action: manipulation;
+            filter: drop-shadow(0 5px 10px rgba(200,120,0,.32));
+            animation: giftBounce 1s cubic-bezier(.36,.07,.19,.97) infinite;
+        }
+        @keyframes giftBounce {
+            0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 5px 10px rgba(200,120,0,.32)); }
+            45%, 55% { transform: translateY(-9px) scale(1.06); filter: drop-shadow(0 10px 18px rgba(200,120,0,.46)); }
+            80%      { transform: translateY(1px) scale(.97); }
+        }
+
+        /* ── 炸弹 SVG图标 ── */
+        .bomb-item {
+            position: absolute;
+            width: 52px; height: 52px;
+            z-index: 6;
+            cursor: pointer;
+            touch-action: manipulation;
+            filter: drop-shadow(0 5px 10px rgba(0,0,0,.3));
+            animation: bombShake 0.5s ease-in-out infinite;
+        }
+        @keyframes bombShake {
+            0%, 100% { transform: rotate(-7deg) scale(1); }
+            25%       { transform: rotate(7deg) scale(1.04); }
+            50%       { transform: rotate(-5deg) scale(1); }
+            75%       { transform: rotate(5deg) scale(1.02); }
+        }
+
+        /* ── 鼓励浮字 ── */
+        .encourage-float {
+            position: absolute;
+            top: 35%;
+            left: 50%;
+            transform: translateX(-50%) scale(0);
+            font-size: 24px;
+            font-weight: 900;
+            color: #2ECC71;
+            text-shadow: 0 2px 10px rgba(0,0,0,.15);
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 20;
+        }
+        .encourage-float.show {
+            animation: floatUp 1s var(--ease-spring) forwards;
+        }
+        @keyframes floatUp {
+            0%  { transform: translateX(-50%) scale(0) translateY(0); opacity: 1; }
+            30% { transform: translateX(-50%) scale(1.25) translateY(-12px); }
+            100%{ transform: translateX(-50%) scale(.85) translateY(-55px); opacity: 0; }
+        }
+
+        /* ── 底部提示 Pill（替代普通文字，更有游戏感） ── */
+        .game-bottom-hint {
+            position: absolute;
+            bottom: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,.22);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border: 1px solid rgba(255,255,255,.4);
+            border-radius: var(--r-pill);
+            padding: 7px 20px;
+            font-size: 12px;
+            color: rgba(255,255,255,.95);
+            font-weight: 700;
+            pointer-events: none;
+            z-index: 10;
+            letter-spacing: .5px;
+            white-space: nowrap;
+            text-shadow: 0 1px 3px rgba(40,80,140,.3);
+            box-shadow: 0 2px 12px rgba(60,100,180,.12);
+        }
+
+        /* ── 班味惩罚态覆盖 ── */
+        .banwei-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(50,50,50,.2);
+            z-index: 8;
+            pointer-events: none;
+            display: none;
+        }
+        .banwei-overlay.show { display: block; }
+
+        @keyframes banweiPop {
+            0%  { transform: translate(-50%, -50%) scale(0) rotate(-5deg); }
+            70% { transform: translate(-50%, -50%) scale(1.1) rotate(2deg); }
+            100%{ transform: translate(-50%, -50%) scale(1) rotate(0); }
+        }
+
+        @keyframes obstacleFloat2 {
+            0%, 100% { transform: translateY(0); }
+            50%       { transform: translateY(-8px); }
+        }
+
+        /* 礼包SVG颜色 */
+        .gift-box-body { fill: #FF8C42; }
+        .gift-box-lid  { fill: #FF6B1A; }
+        .gift-box-ribbon { stroke: #FFD700; }
+        .gift-box-bow  { fill: #FFD700; }
+
+        /* ============================================================
+           5. 答题面板 Quiz
+        ============================================================ */
+        .quiz-card {
+            background: #FFF8E7;
+            border-radius: var(--r-xl);
+            padding: var(--sp6);
+            width: 88%;
+            box-shadow: var(--shadow-lg);
+            transform: scale(.88) translateY(24px);
+            transition: transform 300ms var(--ease-spring);
+        }
+        .modal-backdrop.active .quiz-card {
+            transform: scale(1) translateY(0);
+        }
+
+        .quiz-floor-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--sp2);
+            background: var(--pink-deep);
+            color: var(--white);
+            font-size: 13px;
+            font-weight: 700;
+            padding: var(--sp1) var(--sp4);
+            border-radius: var(--r-pill);
+            margin-bottom: var(--sp4);
+        }
+
+        .quiz-question-text {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.55;
+            margin-bottom: var(--sp5);
+            min-height: 52px;
+        }
+
+        .quiz-options-grid {
+            display: flex;
+            flex-direction: column;
+            gap: var(--sp3);
+        }
+
+        .quiz-opt {
+            background: var(--white);
+            border: 2.5px solid var(--cream-dark);
+            border-radius: var(--r-md);
+            padding: var(--sp4) var(--sp5);
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            cursor: pointer;
+            text-align: left;
+            transition: all 150ms var(--ease-out);
+            display: flex;
+            align-items: flex-start;
+            gap: var(--sp3);
+            min-height: 52px;
+            line-height: 1.4;
+        }
+        .quiz-opt:active { transform: scale(.98); }
+        .quiz-opt-label {
+            min-width: 24px; height: 24px;
+            background: var(--cream-dark);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .quiz-opt.selected-correct {
+            background: var(--green-light);
+            border-color: var(--green);
+        }
+        .quiz-opt.selected-correct .quiz-opt-label {
+            background: var(--green);
+            color: var(--white);
+        }
+        .quiz-opt.selected-wrong {
+            background: #FFE8E8;
+            border-color: var(--red);
+        }
+        .quiz-opt.selected-wrong .quiz-opt-label {
+            background: var(--red);
+            color: var(--white);
+        }
+        .quiz-opt.highlight-correct {
+            background: var(--green-light);
+            border-color: var(--green);
+        }
+
+        .quiz-result-banner {
+            margin-top: var(--sp4);
+            padding: var(--sp3) var(--sp5);
+            border-radius: var(--r-md);
+            font-size: 15px;
+            font-weight: 700;
+            text-align: center;
+            display: none;
+        }
+        .quiz-result-banner.correct {
+            background: #E8F9F0;
+            color: #1A8A4A;
+            display: block;
+        }
+        .quiz-result-banner.wrong {
+            background: #FFE8E8;
+            color: #CC2222;
+            display: block;
+        }
+
+        /* ============================================================
+           6. 收集展示弹窗
+        ============================================================ */
+        .collection-card {
+            background: var(--white);
+            border-radius: var(--r-xl);
+            padding: var(--sp6);
+            width: 88%;
+            box-shadow: var(--shadow-lg);
+            transform: scale(.88) translateY(24px);
+            transition: transform 300ms var(--ease-spring);
+        }
+        .modal-backdrop.active .collection-card {
+            transform: scale(1) translateY(0);
+        }
+
+        .collection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--sp5);
+        }
+        .collection-header h3 {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+        .collection-close-btn {
+            width: 32px; height: 32px;
+            background: var(--cream);
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--text-secondary);
+        }
+
+        .collection-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--sp3);
+            margin-bottom: var(--sp5);
+        }
+        .collection-slot {
+            background: var(--cream);
+            border-radius: var(--r-md);
+            padding: var(--sp4) var(--sp2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--sp2);
+            min-height: 96px;
+            position: relative;
+            overflow: hidden;
+        }
+        .collection-slot.unlocked {
+            background: linear-gradient(135deg, #E8F9F0 0%, #D0F4E4 100%);
+            border: 2px solid var(--green-light);
+        }
+        .collection-slot.locked {
+            background: var(--cream-dark);
+            opacity: .7;
+        }
+        .slot-emoji { font-size: 32px; }
+        .slot-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-align: center;
+            line-height: 1.3;
+        }
+        .slot-tag {
+            position: absolute;
+            top: 6px; right: 6px;
+            background: var(--green);
+            color: var(--white);
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 5px;
+            border-radius: var(--r-pill);
+        }
+
+        .collection-progress-bar {
+            background: var(--cream);
+            border-radius: var(--r-pill);
+            height: 8px;
+            margin-bottom: var(--sp3);
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--green) 0%, #30D484 100%);
+            border-radius: var(--r-pill);
+            width: 67%;
+            transition: width 600ms var(--ease-out);
+        }
+        .progress-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: right;
+            margin-bottom: var(--sp5);
+        }
+
+        /* ============================================================
+           7. 炸弹惩罚弹窗
+        ============================================================ */
+        .bomb-card {
+            background: var(--white);
+            border-radius: var(--r-xl);
+            padding: var(--sp8) var(--sp6) var(--sp6);
+            width: 88%;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+            transform: scale(.88) translateY(24px);
+            transition: transform 300ms var(--ease-spring);
+        }
+        .modal-backdrop.active .bomb-card {
+            transform: scale(1) translateY(0);
+        }
+
+        .bomb-icon-wrap {
+            font-size: 64px;
+            margin-bottom: var(--sp4);
+            animation: bombShake 0.5s ease-in-out;
+        }
+        @keyframes bombShake {
+            0%,100%{ transform: rotate(0); }
+            20%    { transform: rotate(-8deg); }
+            40%    { transform: rotate(8deg); }
+            60%    { transform: rotate(-5deg); }
+            80%    { transform: rotate(5deg); }
+        }
+        .bomb-title {
+            font-size: 24px;
+            font-weight: 900;
+            color: var(--text-primary);
+            margin-bottom: var(--sp3);
+        }
+        .bomb-floor-info {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--sp2);
+            background: var(--cream);
+            border-radius: var(--r-pill);
+            padding: var(--sp2) var(--sp4);
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: var(--sp4);
+        }
+        .bomb-message {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: var(--sp6);
+        }
+        .bomb-countdown {
+            font-size: 12px;
+            color: var(--text-hint);
+            margin-top: var(--sp3);
+        }
+        .countdown-num {
+            font-weight: 800;
+            color: var(--red);
+        }
+
+        /* ============================================================
+           8. 礼包奖励弹窗
+        ============================================================ */
+        .gift-card {
+            background: linear-gradient(135deg, #FFFDE7 0%, #FFF8C8 100%);
+            border-radius: var(--r-xl);
+            padding: var(--sp8) var(--sp6) var(--sp6);
+            width: 88%;
+            box-shadow: 0 0 0 4px rgba(255,215,0,.3), var(--shadow-lg);
+            text-align: center;
+            transform: scale(.88) translateY(24px);
+            transition: transform 300ms var(--ease-spring);
+        }
+        .modal-backdrop.active .gift-card {
+            transform: scale(1) translateY(0);
+        }
+
+        .gift-icon-wrap {
+            font-size: 72px;
+            margin-bottom: var(--sp4);
+            animation: giftPop 0.5s var(--ease-spring) forwards;
+        }
+        @keyframes giftPop {
+            0%  { transform: scale(0) rotate(-15deg); }
+            60% { transform: scale(1.2) rotate(5deg); }
+            100%{ transform: scale(1) rotate(0); }
+        }
+        .gift-quality {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--sp2);
+            padding: var(--sp2) var(--sp4);
+            border-radius: var(--r-pill);
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: var(--sp3);
+        }
+        .gift-quality.gold { background: #FFD700; color: #5A3A00; }
+        .gift-quality.silver { background: #C0C0C0; color: #2A2A2A; }
+        .gift-quality.bronze { background: #CD7F32; color: var(--white); }
+
+        .gift-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: var(--sp2);
+        }
+        .gift-message {
+            font-size: 15px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: var(--sp6);
+        }
+
+        /* ============================================================
+           9. 终局界面 Ending
+        ============================================================ */
+        #screen-end {
+            background: linear-gradient(160deg, #FFF0C8 0%, #FFE4A3 40%, #FFD4C2 80%, #FFBCCC 100%);
+            align-items: center;
+            justify-content: center;
+            padding: var(--sp10) var(--sp8);
+        }
+
+        .end-helicopter {
+            font-size: 80px;
+            margin-bottom: var(--sp3);
+            animation: heliFloat 2s ease-in-out infinite;
+            filter: drop-shadow(0 12px 20px rgba(0,0,0,.15));
+        }
+        @keyframes heliFloat {
+            0%, 100% { transform: translateY(0) rotate(-3deg); }
+            50%       { transform: translateY(-18px) rotate(3deg); }
+        }
+
+        .end-confetti {
+            position: absolute;
+            font-size: 20px;
+            pointer-events: none;
+        }
+
+        .end-badge {
+            background: var(--white);
+            border-radius: var(--r-xl);
+            padding: var(--sp5) var(--sp8);
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+            margin-bottom: var(--sp5);
+            width: 100%;
+        }
+        .end-badge-label {
+            font-size: 13px;
+            color: var(--text-hint);
+            font-weight: 600;
+            letter-spacing: 2px;
+            margin-bottom: var(--sp2);
+        }
+        .end-floor-num {
+            font-size: 64px;
+            font-weight: 900;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+        .end-floor-unit {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .end-message {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-align: center;
+            line-height: 1.6;
+            margin-bottom: var(--sp8);
+            padding: 0 var(--sp4);
+        }
+
+        .end-actions {
+            display: flex;
+            flex-direction: column;
+            gap: var(--sp3);
+            width: 100%;
+        }
+
+        /* 飘落的彩纸 */
+        .confetti-piece {
+            position: absolute;
+            width: 10px; height: 10px;
+            border-radius: 2px;
+            pointer-events: none;
+            animation: confettiFall linear forwards;
+        }
+        @keyframes confettiFall {
+            0%  { transform: translateY(-20px) rotate(0); opacity: 1; }
+            100%{ transform: translateY(900px) rotate(720deg); opacity: 0; }
+        }
+
+        /* ============================================================
+           10. 班味惩罚状态（游戏内浮层）
+        ============================================================ */
+        #banwei-state {
+            position: absolute;
+            inset: 0;
+            background: rgba(40,40,40,.25);
+            z-index: 20;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: var(--sp4);
+        }
+        #banwei-state.show { display: flex; }
+
+        .banwei-card {
+            background: #2C2C2C;
+            border-radius: var(--r-xl);
+            padding: var(--sp6);
+            width: 85%;
+            text-align: center;
+        }
+        .banwei-char { font-size: 52px; margin-bottom: var(--sp3); }
+        .banwei-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: #FF4444;
+            margin-bottom: var(--sp2);
+        }
+        .banwei-sub {
+            font-size: 13px;
+            color: #AAA;
+            line-height: 1.5;
+        }
+
+        /* ============================================================
+           11. 暂停界面（弹窗）
+        ============================================================ */
+        .pause-card {
+            background: var(--white);
+            border-radius: var(--r-xl);
+            padding: var(--sp8) var(--sp6);
+            width: 80%;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+            transform: scale(.88) translateY(24px);
+            transition: transform 300ms var(--ease-spring);
+        }
+        .modal-backdrop.active .pause-card {
+            transform: scale(1) translateY(0);
+        }
+        .pause-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: var(--sp6);
+        }
+        .pause-actions {
+            display: flex;
+            flex-direction: column;
+            gap: var(--sp3);
+        }
+
+        /* ============================================================
+           底部导航标签（原型预览用）
+        ============================================================ */
+        #nav-tabs {
+            position: fixed;
+            bottom: 0; left: 50%;
+            transform: translateX(-50%);
+            width: 375px;
+            background: rgba(255,255,255,.96);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid var(--cream-dark);
+            padding: var(--sp3) var(--sp5);
+            display: flex;
+            gap: var(--sp2);
+            z-index: 999;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .nav-tab {
+            background: var(--cream);
+            border: 1.5px solid var(--cream-dark);
+            border-radius: var(--r-pill);
+            padding: var(--sp2) var(--sp3);
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 120ms;
+            white-space: nowrap;
+        }
+        .nav-tab:hover, .nav-tab.active {
+            background: var(--yellow);
+            border-color: var(--yellow-deep);
+            color: var(--text-primary);
+        }
+
+        /* ============================================================
+           工具：通用
+        ============================================================ */
+        .text-center { text-align: center; }
+        .flex-col { display: flex; flex-direction: column; }
+        .mt-2 { margin-top: var(--sp2); }
+        .mt-4 { margin-top: var(--sp4); }
+        .gap-3 { gap: var(--sp3); }
+
+        /* ============================================================
+           响应式（窄屏手机物理机）
+        ============================================================ */
+        @media (max-width: 400px) {
+            #app { width: 100vw; height: 100vh; border-radius: 0; }
+            #nav-tabs { width: 100vw; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ============================================================
+     手机容器
+============================================================ -->
+<div id="app">
+
+    <!-- ================================================
+         1. 启动闪屏
+    ================================================ -->
+    <div class="screen active" id="screen-splash">
+        <div class="splash-building" style="margin-bottom:8px;">
+            <div style="position:absolute;bottom:0;left:30px;width:100px;height:180px;background:linear-gradient(180deg,#FFEAA7,#FDD789);border-radius:12px 12px 0 0;box-shadow:inset -4px 0 8px rgba(0,0,0,.06);"></div>
+            <div class="splash-windows" style="position:absolute;bottom:20px;left:46px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:68px;">
+                <div class="splash-window lit"></div>
+                <div class="splash-window"></div>
+                <div class="splash-window lit"></div>
+                <div class="splash-window"></div>
+                <div class="splash-window lit"></div>
+                <div class="splash-window lit"></div>
+                <div class="splash-window lit"></div>
+                <div class="splash-window"></div>
+                <div class="splash-window lit"></div>
+            </div>
+            <div class="splash-char">🧑‍💻</div>
+        </div>
+        <div class="splash-logo">
+            <div class="splash-title">爬 楼</div>
+            <div class="splash-subtitle">Going Up ↑</div>
+            <div class="splash-tagline">打工人的精神离职之旅</div>
+        </div>
+        <div class="splash-loader" style="margin-top:24px;">
+            <div class="splash-loader-bar"></div>
+        </div>
+    </div>
+
+    <!-- ================================================
+         2. 开始界面
+    ================================================ -->
+    <div class="screen" id="screen-start">
+        <!-- 装饰楼梯（用div模拟） -->
+        <div style="position:absolute;bottom:0;right:-10px;width:220px;height:280px;opacity:.15;pointer-events:none;">
+            <div style="position:absolute;bottom:0;right:0;width:200px;height:24px;background:var(--pink-deep);border-radius:8px 8px 0 0;"></div>
+            <div style="position:absolute;bottom:28px;right:24px;width:166px;height:24px;background:var(--peach-deep);border-radius:8px 8px 0 0;"></div>
+            <div style="position:absolute;bottom:56px;right:48px;width:132px;height:24px;background:var(--yellow);border-radius:8px 8px 0 0;"></div>
+            <div style="position:absolute;bottom:84px;right:72px;width:98px;height:24px;background:var(--pink-deep);border-radius:8px 8px 0 0;"></div>
+            <div style="position:absolute;bottom:112px;right:96px;width:64px;height:24px;background:var(--peach-deep);border-radius:8px 8px 0 0;"></div>
+        </div>
+
+        <div class="start-header">
+            <div class="start-game-icon">🏢</div>
+            <div class="start-title">爬 楼<br><span>Going Up</span></div>
+            <div class="start-desc">打工人逃离职场的跑酷答题游戏<br>爬到 365 层，直升机接你走！</div>
+            <div class="start-stats">
+                <div class="stat-chip"><span>🎯</span> 365 层</div>
+                <div class="stat-chip"><span>❓</span> 100 题</div>
+                <div class="stat-chip"><span>⏱</span> 3–5 分钟</div>
+            </div>
+        </div>
+
+        <div class="start-actions">
+            <button class="btn-start-main" onclick="showScreen('screen-game')">
+                🚀 开始游戏
+            </button>
+            <button class="btn btn-white" onclick="showScreen('screen-tutorial')" style="font-size:15px;">
+                📖 游戏说明
+            </button>
+        </div>
+    </div>
+
+    <!-- ================================================
+         3. 游戏说明
+    ================================================ -->
+    <div class="screen" id="screen-tutorial">
+        <div class="tutorial-header">
+            <div style="font-size:13px;color:rgba(61,43,31,.6);font-weight:600;margin-bottom:4px;">HOW TO PLAY</div>
+            <div class="tutorial-title">游戏说明 📋</div>
+            <div class="tutorial-subtitle">一分钟读懂游戏玩法</div>
+        </div>
+        <div class="tutorial-body">
+            <div class="tutorial-item">
+                <div class="tutorial-icon">👆</div>
+                <div class="tutorial-text">
+                    <h4>单指左右滑动</h4>
+                    <p>控制角色向左或向右移动，角色会自动向上跳跃</p>
+                </div>
+            </div>
+            <div class="tutorial-item">
+                <div class="tutorial-icon">❓</div>
+                <div class="tutorial-text">
+                    <h4>遇到问号方块</h4>
+                    <p>碰撞触发答题，每 10–15 层出现一次<br>
+                    答对 → 继续爬楼！答错 → 受到惩罚</p>
+                </div>
+            </div>
+            <div class="tutorial-item">
+                <div class="tutorial-icon">💣</div>
+                <div class="tutorial-text">
+                    <h4>小心炸弹！</h4>
+                    <p>从天而降，躲不掉触发炸弹惩罚<br>
+                    分享给朋友可免除一次惩罚</p>
+                </div>
+            </div>
+            <div class="tutorial-item">
+                <div class="tutorial-icon">🎁</div>
+                <div class="tutorial-text">
+                    <h4>收集礼包</h4>
+                    <p>金/银/铜三种品质<br>
+                    金礼包直接跳 +10 层！</p>
+                </div>
+            </div>
+            <div class="tutorial-item">
+                <div class="tutorial-icon">🚁</div>
+                <div class="tutorial-text">
+                    <h4>终极目标</h4>
+                    <p>爬到第 365 层，直升机来接你<br>
+                    完成三轮收集，彻底逃离班味！</p>
+                </div>
+            </div>
+        </div>
+        <div class="tutorial-footer">
+            <button class="btn btn-yellow" style="width:100%;font-size:16px;" onclick="showScreen('screen-game')">
+                我明白了，开始爬！🚀
+            </button>
+            <button class="btn btn-ghost" style="width:100%;font-size:14px;margin-top:8px;" onclick="showScreen('screen-start')">
+                返回
+            </button>
+        </div>
+    </div>
+
+    <!-- ================================================
+         4. 游戏主界面
+    ================================================ -->
+    <div class="screen" id="screen-game">
+
+        <!-- HUD：左暂停 | 中楼层胶囊 | 右收集 -->
+        <div class="game-hud">
+            <button class="hud-pause" onclick="showModal('modal-pause')" aria-label="暂停游戏">
+                <div class="hud-pause-icon">
+                    <div class="hud-pause-bar"></div>
+                    <div class="hud-pause-bar"></div>
+                </div>
+            </button>
+
+            <div class="hud-floor-pill">
+                <span class="hud-floor-label-text">楼层</span>
+                <span class="hud-floor-current" id="floor-num">6</span>
+                <span class="hud-floor-sep">/</span>
+                <span class="hud-floor-total">365</span>
+            </div>
+
+            <div class="hud-collection" onclick="showModal('modal-collection')" aria-label="查看收集">
+                <!-- SVG礼盒图标 -->
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <rect x="2" y="9" width="16" height="9" rx="2" fill="#FF8C42"/>
+                    <rect x="1" y="6" width="18" height="4" rx="2" fill="#FF6B1A"/>
+                    <rect x="9" y="6" width="2" height="12" rx="1" fill="#FFD700"/>
+                    <path d="M10 6 C10 6 7 2 5 3 C3 4 5 6 10 6 C15 6 17 4 15 3 C13 2 10 6 10 6Z" fill="#FFD700"/>
+                </svg>
+                <span class="hud-collection-count">0/3</span>
+            </div>
+        </div>
+
+        <!-- 游戏画布：背景云层 + Z字型等轴楼梯 SVG -->
+        <div class="game-canvas">
+
+            <!-- 云朵层（更立体，带阴影底部） -->
+            <svg class="cloud-layer" viewBox="0 0 375 700" xmlns="http://www.w3.org/2000/svg">
+                <!-- 左上大云 -->
+                <g filter="drop-shadow(0 6px 8px rgba(120,180,220,.25))">
+                    <ellipse cx="72" cy="82" rx="44" ry="20" fill="white"/>
+                    <ellipse cx="50" cy="92" rx="26" ry="17" fill="white"/>
+                    <ellipse cx="96" cy="92" rx="24" ry="16" fill="white"/>
+                    <ellipse cx="72" cy="98" rx="42" ry="14" fill="white"/>
+                    <!-- 云底阴影 -->
+                    <ellipse cx="72" cy="100" rx="38" ry="5" fill="rgba(160,200,230,.2)"/>
+                </g>
+                <!-- 右侧中云 -->
+                <g opacity=".85" filter="drop-shadow(0 4px 6px rgba(120,180,220,.2))">
+                    <ellipse cx="318" cy="148" rx="32" ry="15" fill="white"/>
+                    <ellipse cx="300" cy="157" rx="19" ry="12" fill="white"/>
+                    <ellipse cx="336" cy="157" rx="17" ry="12" fill="white"/>
+                    <ellipse cx="318" cy="163" rx="30" ry="10" fill="white"/>
+                    <ellipse cx="318" cy="165" rx="26" ry="4" fill="rgba(160,200,230,.18)"/>
+                </g>
+                <!-- 左侧小云 -->
+                <g opacity=".72" filter="drop-shadow(0 3px 5px rgba(120,180,220,.18))">
+                    <ellipse cx="44" cy="192" rx="25" ry="11" fill="white"/>
+                    <ellipse cx="30" cy="199" rx="15" ry="9" fill="white"/>
+                    <ellipse cx="58" cy="199" rx="14" ry="9" fill="white"/>
+                    <ellipse cx="44" cy="204" rx="23" ry="8" fill="white"/>
+                </g>
+                <!-- 右上小云 -->
+                <g opacity=".6">
+                    <ellipse cx="340" cy="232" rx="28" ry="12" fill="white"/>
+                    <ellipse cx="325" cy="240" rx="17" ry="10" fill="white"/>
+                    <ellipse cx="355" cy="240" rx="15" ry="10" fill="white"/>
+                    <ellipse cx="340" cy="245" rx="26" ry="8" fill="white"/>
+                </g>
+                <!-- 远景建筑剪影（左） -->
+                <g opacity=".12" fill="#5080A0">
+                    <rect x="0" y="618" width="22" height="72"/>
+                    <rect x="20" y="592" width="30" height="98"/>
+                    <rect x="30" y="578" width="16" height="20"/>
+                    <rect x="48" y="608" width="24" height="82"/>
+                    <rect x="56" y="594" width="12" height="18"/>
+                </g>
+                <!-- 远景建筑剪影（右） -->
+                <g opacity=".1" fill="#5080A0">
+                    <rect x="308" y="612" width="26" height="78"/>
+                    <rect x="322" y="596" width="14" height="18"/>
+                    <rect x="332" y="578" width="20" height="112"/>
+                    <rect x="350" y="600" width="25" height="90"/>
+                    <rect x="363" y="584" width="12" height="18"/>
+                </g>
+            </svg>
+
+
+
+            <!-- Z字型等轴楼梯 SVG（黄橙风格，参考图配色） -->
+            <svg class="stair-svg" viewBox="0 0 375 700" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <!--
+                        参考图配色：
+                          顶面（黄绿）: 底部台阶 #C8E050 → 顶部台阶 #FFE566（越高越黄）
+                          正面（橙）:   #F5A800 深 → #FFCA28 浅（从底到顶变亮）
+                          侧面（深橙）: #D47800 → #E89000
+                        每组台阶顶面/正面/侧面颜色单独定义，营造高度感
+                    -->
+
+                    <!-- 组1顶面（最底，黄绿） -->
+                    <linearGradient id="top1" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#C4DC3A"/>
+                        <stop offset="100%" stop-color="#D8EE50"/>
+                    </linearGradient>
+                    <!-- 组2顶面（黄绿→黄） -->
+                    <linearGradient id="top2" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#D8EE50"/>
+                        <stop offset="100%" stop-color="#EEFF66"/>
+                    </linearGradient>
+                    <!-- 组3顶面（黄） -->
+                    <linearGradient id="top3" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#F0FF70"/>
+                        <stop offset="100%" stop-color="#FFFF88"/>
+                    </linearGradient>
+                    <!-- 组4顶面（亮黄白） -->
+                    <linearGradient id="top4" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#FFFF90"/>
+                        <stop offset="100%" stop-color="#FFFFAA"/>
+                    </linearGradient>
+                </defs>
+
+                <!--
+                    Z字型楼梯：4组 共15级台阶
+                    台阶三面色：
+                      顶面 = 黄绿渐变（linearGradient）
+                      正面（前面）= 橙色主调
+                      侧面（右面）= 深橙（最暗）
+                    描边：深橙描边，随高度减淡
+                -->
+
+                <!-- ===== 组1：左下角→右上（4级，最深橙） ===== -->
+                <g><!-- 1-1 -->
+                    <polygon points="30,605 110,605 125,595 45,595" fill="url(#top1)" stroke="#C86800" stroke-width="1.5"/>
+                    <polygon points="30,605 110,605 110,625 30,625" fill="#F5A000" stroke="#C86800" stroke-width="1.5"/>
+                    <polygon points="110,605 125,595 125,615 110,625" fill="#D07800" stroke="#C86800" stroke-width="1.5"/>
+                </g>
+                <g><!-- 1-2 -->
+                    <polygon points="55,583 135,583 150,573 70,573" fill="url(#top1)" stroke="#C86800" stroke-width="1.5"/>
+                    <polygon points="55,583 135,583 135,603 55,603" fill="#F5A200" stroke="#C86800" stroke-width="1.5"/>
+                    <polygon points="135,583 150,573 150,593 135,603" fill="#D07A00" stroke="#C86800" stroke-width="1.5"/>
+                </g>
+                <g><!-- 1-3 -->
+                    <polygon points="80,561 160,561 175,551 95,551" fill="url(#top1)" stroke="#C87000" stroke-width="1.5"/>
+                    <polygon points="80,561 160,561 160,581 80,581" fill="#F6A400" stroke="#C87000" stroke-width="1.5"/>
+                    <polygon points="160,561 175,551 175,571 160,581" fill="#D27C00" stroke="#C87000" stroke-width="1.5"/>
+                </g>
+                <g><!-- 1-4 转折 -->
+                    <polygon points="105,539 185,539 200,529 120,529" fill="url(#top1)" stroke="#CA7200" stroke-width="1.4"/>
+                    <polygon points="105,539 185,539 185,559 105,559" fill="#F7A600" stroke="#CA7200" stroke-width="1.4"/>
+                    <polygon points="185,539 200,529 200,549 185,559" fill="#D38000" stroke="#CA7200" stroke-width="1.4"/>
+                </g>
+
+                <!-- ===== 组2：右转→右上（4级，橙变亮） ===== -->
+                <g><!-- 2-1 -->
+                    <polygon points="165,507 245,507 260,497 180,497" fill="url(#top2)" stroke="#CC7800" stroke-width="1.4"/>
+                    <polygon points="165,507 245,507 245,527 165,527" fill="#F8A800" stroke="#CC7800" stroke-width="1.4"/>
+                    <polygon points="245,507 260,497 260,517 245,527" fill="#D48400" stroke="#CC7800" stroke-width="1.4"/>
+                </g>
+                <g><!-- 2-2 -->
+                    <polygon points="190,485 270,485 285,475 205,475" fill="url(#top2)" stroke="#CE7E00" stroke-width="1.3"/>
+                    <polygon points="190,485 270,485 270,505 190,505" fill="#F9AA00" stroke="#CE7E00" stroke-width="1.3"/>
+                    <polygon points="270,485 285,475 285,495 270,505" fill="#D58800" stroke="#CE7E00" stroke-width="1.3"/>
+                </g>
+                <g><!-- 2-3 礼包在此 -->
+                    <polygon points="215,463 295,463 310,453 230,453" fill="url(#top2)" stroke="#D08400" stroke-width="1.3"/>
+                    <polygon points="215,463 295,463 295,483 215,483" fill="#FAAC00" stroke="#D08400" stroke-width="1.3"/>
+                    <polygon points="295,463 310,453 310,473 295,483" fill="#D68C00" stroke="#D08400" stroke-width="1.3"/>
+                </g>
+                <g><!-- 2-4 右端转折 -->
+                    <polygon points="240,441 320,441 335,431 255,431" fill="url(#top2)" stroke="#D28800" stroke-width="1.3"/>
+                    <polygon points="240,441 320,441 320,461 240,461" fill="#FBAE00" stroke="#D28800" stroke-width="1.3"/>
+                    <polygon points="320,441 335,431 335,451 320,461" fill="#D79000" stroke="#D28800" stroke-width="1.3"/>
+                </g>
+
+                <!-- ===== 组3：左转→左上（4级，亮黄橙） ===== -->
+                <g><!-- 3-1 -->
+                    <polygon points="220,409 300,409 315,399 235,399" fill="url(#top3)" stroke="#D48C00" stroke-width="1.2"/>
+                    <polygon points="220,409 300,409 300,429 220,429" fill="#FCB000" stroke="#D48C00" stroke-width="1.2"/>
+                    <polygon points="300,409 315,399 315,419 300,429" fill="#D89400" stroke="#D48C00" stroke-width="1.2"/>
+                </g>
+                <g><!-- 3-2 障碍在此 -->
+                    <polygon points="190,387 270,387 285,377 205,377" fill="url(#top3)" stroke="#D69000" stroke-width="1.2"/>
+                    <polygon points="190,387 270,387 270,407 190,407" fill="#FCB200" stroke="#D69000" stroke-width="1.2"/>
+                    <polygon points="270,387 285,377 285,397 270,407" fill="#D99600" stroke="#D69000" stroke-width="1.2"/>
+                </g>
+                <g><!-- 3-3 -->
+                    <polygon points="160,365 240,365 255,355 175,355" fill="url(#top3)" stroke="#D89400" stroke-width="1.2"/>
+                    <polygon points="160,365 240,365 240,385 160,385" fill="#FDB400" stroke="#D89400" stroke-width="1.2"/>
+                    <polygon points="240,365 255,355 255,375 240,385" fill="#DA9A00" stroke="#D89400" stroke-width="1.2"/>
+                </g>
+                <g><!-- 3-4 -->
+                    <polygon points="130,343 210,343 225,333 145,333" fill="url(#top3)" stroke="#DA9800" stroke-width="1.1"/>
+                    <polygon points="130,343 210,343 210,363 130,363" fill="#FDB600" stroke="#DA9800" stroke-width="1.1"/>
+                    <polygon points="210,343 225,333 225,353 210,363" fill="#DB9E00" stroke="#DA9800" stroke-width="1.1"/>
+                </g>
+
+                <!-- ===== 组4：右转→顶部（3级，最亮黄） ===== -->
+                <g><!-- 4-1 -->
+                    <polygon points="150,311 230,311 245,301 165,301" fill="url(#top4)" stroke="#DCA000" stroke-width="1.1"/>
+                    <polygon points="150,311 230,311 230,331 150,331" fill="#FEB800" stroke="#DCA000" stroke-width="1.1"/>
+                    <polygon points="230,311 245,301 245,321 230,331" fill="#DCA400" stroke="#DCA000" stroke-width="1.1"/>
+                </g>
+                <g><!-- 4-2 -->
+                    <polygon points="175,289 255,289 270,279 190,279" fill="url(#top4)" stroke="#DEA400" stroke-width="1.1"/>
+                    <polygon points="175,289 255,289 255,309 175,309" fill="#FFBA00" stroke="#DEA400" stroke-width="1.1"/>
+                    <polygon points="255,289 270,279 270,299 255,309" fill="#DDA800" stroke="#DEA400" stroke-width="1.1"/>
+                </g>
+                <g><!-- 4-3 顶层 -->
+                    <polygon points="200,267 280,267 295,257 215,257" fill="url(#top4)" stroke="#E0A800" stroke-width="1"/>
+                    <polygon points="200,267 280,267 280,287 200,287" fill="#FFBC00" stroke="#E0A800" stroke-width="1"/>
+                    <polygon points="280,267 295,257 295,277 280,287" fill="#DEAC00" stroke="#E0A800" stroke-width="1"/>
+                </g>
+
+                <!-- ===== 顶面高光圆点（台阶光泽感） ===== -->
+                <!-- 组1高光（黄绿调） -->
+                <circle cx="55" cy="599" r="3" fill="#E8F860" opacity=".7"/>
+                <circle cx="73" cy="599" r="3" fill="#E8F860" opacity=".7"/>
+                <circle cx="80" cy="577" r="3" fill="#E8F860" opacity=".7"/>
+                <circle cx="98" cy="577" r="3" fill="#E8F860" opacity=".7"/>
+                <circle cx="105" cy="555" r="3" fill="#E8F860" opacity=".65"/>
+                <circle cx="123" cy="555" r="3" fill="#E8F860" opacity=".65"/>
+                <circle cx="130" cy="533" r="3" fill="#E8F860" opacity=".65"/>
+                <circle cx="148" cy="533" r="3" fill="#E8F860" opacity=".65"/>
+                <!-- 组2高光（黄调） -->
+                <circle cx="188" cy="511" r="2.8" fill="#F5FF70" opacity=".65"/>
+                <circle cx="206" cy="511" r="2.8" fill="#F5FF70" opacity=".65"/>
+                <circle cx="213" cy="489" r="2.8" fill="#F5FF70" opacity=".65"/>
+                <circle cx="231" cy="489" r="2.8" fill="#F5FF70" opacity=".65"/>
+                <circle cx="238" cy="467" r="2.8" fill="#F5FF70" opacity=".6"/>
+                <circle cx="256" cy="467" r="2.8" fill="#F5FF70" opacity=".6"/>
+                <circle cx="263" cy="445" r="2.8" fill="#F5FF70" opacity=".6"/>
+                <circle cx="281" cy="445" r="2.8" fill="#F5FF70" opacity=".6"/>
+                <!-- 组3高光（亮黄） -->
+                <circle cx="243" cy="413" r="2.5" fill="#FFFF80" opacity=".6"/>
+                <circle cx="261" cy="413" r="2.5" fill="#FFFF80" opacity=".6"/>
+                <circle cx="213" cy="391" r="2.5" fill="#FFFF80" opacity=".6"/>
+                <circle cx="231" cy="391" r="2.5" fill="#FFFF80" opacity=".6"/>
+                <circle cx="183" cy="369" r="2.5" fill="#FFFF80" opacity=".55"/>
+                <circle cx="201" cy="369" r="2.5" fill="#FFFF80" opacity=".55"/>
+                <!-- 组4高光（白黄） -->
+                <circle cx="173" cy="315" r="2.2" fill="#FFFFA0" opacity=".55"/>
+                <circle cx="191" cy="315" r="2.2" fill="#FFFFA0" opacity=".55"/>
+                <circle cx="198" cy="293" r="2.2" fill="#FFFFA0" opacity=".5"/>
+                <circle cx="216" cy="293" r="2.2" fill="#FFFFA0" opacity=".5"/>
+                <circle cx="223" cy="271" r="2.2" fill="#FFFFA0" opacity=".5"/>
+                <circle cx="241" cy="271" r="2.2" fill="#FFFFA0" opacity=".5"/>
+            </svg>
+
+            <!-- 角色：白色圆形 + 棕色窄帽（参考图风格），站在组1第1级台阶上 -->
+            <div class="character" id="game-char" style="left:44px; top:534px;">
+                <svg width="58" height="72" viewBox="0 0 58 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- 帽子：窄帽身 -->
+                    <rect x="16" y="6" width="26" height="14" rx="6" fill="#8B6340"/>
+                    <!-- 帽檐：扁平椭圆，略宽于帽身 -->
+                    <ellipse cx="29" cy="20" rx="17" ry="4" fill="#6B4820"/>
+                    <!-- 帽顶高光（左上角小白椭圆） -->
+                    <ellipse cx="23" cy="10" rx="4" ry="2.5" fill="white" opacity=".25"/>
+
+                    <!-- 身体：纯白正圆 -->
+                    <circle cx="29" cy="43" r="22" fill="white"/>
+                    <!-- 身体右下阴影（立体感） -->
+                    <circle cx="29" cy="43" r="22" fill="none" stroke="#E0D8D0" stroke-width="1.5"/>
+                    <!-- 身体左上高光 -->
+                    <ellipse cx="20" cy="34" rx="7" ry="5" fill="white" opacity=".6"/>
+
+                    <!-- 腮红（淡粉，参考图风格） -->
+                    <ellipse cx="16" cy="48" rx="5" ry="3" fill="#FFAAAA" opacity=".45"/>
+                    <ellipse cx="42" cy="48" rx="5" ry="3" fill="#FFAAAA" opacity=".45"/>
+
+                    <!-- 眼睛：两个小黑圆点 -->
+                    <circle cx="22" cy="41" r="2.8" fill="#2A1A0E"/>
+                    <circle cx="36" cy="41" r="2.8" fill="#2A1A0E"/>
+                    <!-- 眼睛高光 -->
+                    <circle cx="23" cy="40" r="1" fill="white"/>
+                    <circle cx="37" cy="40" r="1" fill="white"/>
+
+                    <!-- 微笑：细弧线 -->
+                    <path d="M 21 50 Q 29 57 37 50" stroke="#2A1A0E" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+                </svg>
+            </div>
+
+            <!-- ❓障碍物：悬浮在组3第2级台阶旁（更大、更圆、更立体） -->
+            <div class="obstacle" style="left:188px; top:340px;" onclick="showModal('modal-quiz')" aria-label="答题障碍">
+                <svg width="30" height="34" viewBox="0 0 30 34" fill="none">
+                    <!-- 高光 -->
+                    <ellipse cx="11" cy="8" rx="5" ry="3" fill="rgba(255,255,255,.35)"/>
+                    <text x="5" y="28" font-size="28" font-weight="900" fill="white"
+                          font-family="system-ui,-apple-system,sans-serif"
+                          style="font-style:italic">?</text>
+                </svg>
+            </div>
+
+            <!-- 🎁礼包：放在组2第3级台阶上（升级SVG，更鲜艳） -->
+            <div class="gift-item" style="left:274px; top:420px;" onclick="showModal('modal-gift')" aria-label="礼包奖励">
+                <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+                    <!-- 盒体阴影 -->
+                    <rect x="6" y="26" width="40" height="23" rx="4" fill="rgba(0,0,0,.1)" transform="translate(2,3)"/>
+                    <!-- 盒体 -->
+                    <rect x="6" y="26" width="40" height="23" rx="4" fill="#FF9140"/>
+                    <!-- 盒体高光 -->
+                    <rect x="6" y="26" width="40" height="10" rx="4" fill="#FFB060" opacity=".6"/>
+                    <!-- 盒盖 -->
+                    <rect x="4" y="16" width="44" height="12" rx="4" fill="#FF6B20"/>
+                    <!-- 盒盖高光 -->
+                    <rect x="4" y="16" width="44" height="5" rx="4" fill="#FF9050" opacity=".5"/>
+                    <!-- 竖彩带 -->
+                    <rect x="23" y="16" width="6" height="33" rx="2" fill="#FFE033"/>
+                    <!-- 横彩带 -->
+                    <rect x="4" y="22" width="44" height="6" rx="2" fill="#FFE033"/>
+                    <!-- 蝴蝶结左 -->
+                    <path d="M 26 16 C 26 16 14 8 12 13 C 10 18 20 18 26 16Z" fill="#FFE033"/>
+                    <!-- 蝴蝶结右 -->
+                    <path d="M 26 16 C 26 16 38 8 40 13 C 42 18 32 18 26 16Z" fill="#FFD020"/>
+                    <!-- 蝴蝶结中心 -->
+                    <circle cx="26" cy="16" r="4.5" fill="#FFBA00"/>
+                    <circle cx="26" cy="16" r="2" fill="#FFD84D"/>
+                    <!-- 高光点 -->
+                    <circle cx="42" cy="30" r="2.5" fill="white" opacity=".4"/>
+                    <circle cx="10" cy="38" r="2" fill="white" opacity=".3"/>
+                </svg>
+            </div>
+
+            <!-- 💣炸弹：放在组3第4级台阶旁（升级SVG，更有质感） -->
+            <div class="bomb-item" style="left:84px; top:320px;" onclick="showModal('modal-bomb')" aria-label="炸弹危险">
+                <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+                    <!-- 炸弹主体阴影 -->
+                    <circle cx="28" cy="32" r="19" fill="rgba(0,0,0,.2)"/>
+                    <!-- 炸弹主体 -->
+                    <circle cx="26" cy="30" r="19" fill="#2A2A2A"/>
+                    <!-- 主体高光 -->
+                    <ellipse cx="18" cy="22" rx="7" ry="5" fill="white" opacity=".14"/>
+                    <!-- 主体光泽 -->
+                    <circle cx="26" cy="30" r="19" fill="none" stroke="#3A3A3A" stroke-width="1.5"/>
+                    <!-- 导火索接口 -->
+                    <rect x="23" y="11" width="6" height="6" rx="2" fill="#444"/>
+                    <!-- 引信线（弯曲） -->
+                    <path d="M26 11 C26 8 30 6 34 8 C38 10 38 4 42 5" stroke="#8B6914" stroke-width="3" stroke-linecap="round" fill="none"/>
+                    <!-- 火花光晕 -->
+                    <circle cx="42" cy="5" r="5" fill="#FF8C00" opacity=".7"/>
+                    <circle cx="42" cy="5" r="3.5" fill="#FFD700"/>
+                    <circle cx="42" cy="5" r="1.8" fill="white" opacity=".8"/>
+                    <!-- 星形火花 -->
+                    <line x1="42" y1="0" x2="42" y2="3" stroke="#FFD700" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="42" y1="7" x2="42" y2="10" stroke="#FFD700" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="37" y1="5" x2="39.5" y2="5" stroke="#FFD700" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="44.5" y1="5" x2="47" y2="5" stroke="#FFD700" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+            </div>
+
+            <!-- 鼓励浮字 -->
+            <div class="encourage-float" id="encourage-text">去班味成功！✨</div>
+        </div>
+
+        <!-- 班味惩罚浮层 -->
+        <div class="banwei-overlay" id="banwei-overlay"></div>
+
+        <!-- 班味惩罚状态卡片 -->
+        <div id="banwei-state">
+            <div class="banwei-card">
+                <div class="banwei-char">👔</div>
+                <div class="banwei-title">你的班味太重了！</div>
+                <div class="banwei-sub">打工魂觉醒中...<br>再答对一题才能解除班味状态</div>
+            </div>
+        </div>
+
+        <!-- 底部提示文字 -->
+        <div class="game-bottom-hint">点击障碍物或礼包继续</div>
+
+    </div>
+
+    <!-- ================================================
+         5. 终局界面
+    ================================================ -->
+    <div class="screen" id="screen-end" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;background:linear-gradient(160deg,#FFF0C8 0%,#FFE4A3 40%,#FFD4C2 80%,#FFBCCC 100%);">
+        <!-- 彩纸（JS生成） -->
+        <div id="confetti-container" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;"></div>
+
+        <div class="end-helicopter">🚁</div>
+
+        <div class="end-badge">
+            <div class="end-badge-label">YOU REACHED</div>
+            <div>
+                <span class="end-floor-num">365</span>
+                <span class="end-floor-unit">F</span>
+            </div>
+        </div>
+
+        <div class="end-message">
+            祝你从此无班味！🎉<br>
+            天天摸鱼，天天加薪！
+        </div>
+
+        <div class="end-actions">
+            <button class="btn-start-main" onclick="resetAndShowStart()">
+                🔄 再玩一次
+            </button>
+            <button class="btn btn-white" style="width:100%;font-size:15px;" onclick="alert('分享到朋友圈成功！')">
+                📸 分享到朋友圈
+            </button>
+        </div>
+    </div>
+
+
+    <!-- ================================================
+         弹窗层
+    ================================================ -->
+
+    <!-- 答题面板 -->
+    <div class="modal-backdrop" id="modal-quiz">
+        <div class="quiz-card">
+            <div class="quiz-floor-badge">
+                ❓ 第 42 层挑战
+            </div>
+            <div class="quiz-question-text" id="quiz-q-text">
+                周一早上被领导问"周末方便开会吗"，你：
+            </div>
+            <div class="quiz-options-grid" id="quiz-opts">
+                <button class="quiz-opt" onclick="selectOpt(this, false)">
+                    <span class="quiz-opt-label">A</span>
+                    <span>立即回复"方便，随时可以"</span>
+                </button>
+                <button class="quiz-opt" onclick="selectOpt(this, true)">
+                    <span class="quiz-opt-label">B</span>
+                    <span>装死不回，周二再回"不好意思没看到"</span>
+                </button>
+                <button class="quiz-opt" onclick="selectOpt(this, false)">
+                    <span class="quiz-opt-label">C</span>
+                    <span>回复"周末要陪家人，下次吧"</span>
+                </button>
+                <button class="quiz-opt" onclick="selectOpt(this, false)">
+                    <span class="quiz-opt-label">D</span>
+                    <span>直接电话过去问什么事</span>
+                </button>
+            </div>
+            <div class="quiz-result-banner" id="quiz-result"></div>
+        </div>
+    </div>
+
+    <!-- 收集展示弹窗 -->
+    <div class="modal-backdrop" id="modal-collection">
+        <div class="collection-card">
+            <div class="collection-header">
+                <h3>🏅 我的收集</h3>
+                <button class="collection-close-btn" onclick="closeModal('modal-collection')">✕</button>
+            </div>
+            <div class="collection-grid">
+                <!-- 已解锁 -->
+                <div class="collection-slot unlocked">
+                    <div class="slot-tag">已获得</div>
+                    <div class="slot-emoji">🏆</div>
+                    <div class="slot-label">摸鱼徽章<br>准时下班</div>
+                </div>
+                <!-- 已解锁 -->
+                <div class="collection-slot unlocked">
+                    <div class="slot-tag">已获得</div>
+                    <div class="slot-emoji">📝</div>
+                    <div class="slot-label">离职宣言<br>老子不干了！</div>
+                </div>
+                <!-- 未解锁 -->
+                <div class="collection-slot locked">
+                    <div class="slot-emoji">🔒</div>
+                    <div class="slot-label">旅游目的地<br>再玩一次解锁</div>
+                </div>
+            </div>
+            <div class="progress-label">收集进度 2/3</div>
+            <div class="collection-progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+            <button class="btn btn-yellow" style="width:100%;font-size:15px;" onclick="closeModal('modal-collection')">
+                关闭
+            </button>
+        </div>
+    </div>
+
+    <!-- 炸弹惩罚弹窗 -->
+    <div class="modal-backdrop" id="modal-bomb">
+        <div class="bomb-card">
+            <div class="bomb-icon-wrap">💥</div>
+            <div class="bomb-title">被炸飞了！</div>
+            <div class="bomb-floor-info">
+                <span>📍</span> 当前楼层：第 42 层
+            </div>
+            <div class="bomb-message">
+                分享给朋友，免除这次炸弹<br>继续向上爬楼！
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                <button class="btn btn-pink" onclick="alert('分享成功！继续游戏');closeModal('modal-bomb')">
+                    📢 分享给朋友（免死）
+                </button>
+                <button class="btn btn-ghost" onclick="resetAndShowStart()">
+                    重新开始
+                </button>
+            </div>
+            <div class="bomb-countdown">
+                <span id="bomb-timer" class="countdown-num">10</span> 秒后自动重新开始
+            </div>
+        </div>
+    </div>
+
+    <!-- 礼包奖励弹窗 -->
+    <div class="modal-backdrop" id="modal-gift">
+        <div class="gift-card">
+            <div class="gift-icon-wrap">🎁</div>
+            <div class="gift-quality gold">⭐ 金礼包</div>
+            <div class="gift-title">跳跃 +10 层！</div>
+            <div class="gift-message">
+                去班味成功！✨<br>
+                你已爬到第 <strong>52</strong> 层
+            </div>
+            <button class="btn btn-yellow" style="width:100%;font-size:16px;" onclick="closeModal('modal-gift')">
+                太棒了！继续！🚀
+            </button>
+        </div>
+    </div>
+
+    <!-- 暂停弹窗 -->
+    <div class="modal-backdrop" id="modal-pause">
+        <div class="pause-card">
+            <div class="pause-title">⏸ 游戏暂停</div>
+            <div class="pause-actions">
+                <button class="btn btn-yellow" style="width:100%;font-size:16px;" onclick="closeModal('modal-pause')">
+                    继续游戏
+                </button>
+                <button class="btn btn-white" style="width:100%;font-size:14px;" onclick="resetAndShowStart()">
+                    退出到主页
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /app -->
+
+
+<!-- ============================================================
+     原型导航（桌面预览用）
+============================================================ -->
+<div id="nav-tabs">
+    <div class="nav-tab active" onclick="showScreen('screen-splash'); setTab(this)">启动闪屏</div>
+    <div class="nav-tab" onclick="showScreen('screen-start'); setTab(this)">开始界面</div>
+    <div class="nav-tab" onclick="showScreen('screen-tutorial'); setTab(this)">游戏说明</div>
+    <div class="nav-tab" onclick="showScreen('screen-game'); closeAllModals(); setTab(this)">游戏主界面</div>
+    <div class="nav-tab" onclick="showScreen('screen-game'); showModal('modal-quiz'); setTab(this)">答题面板</div>
+    <div class="nav-tab" onclick="showScreen('screen-game'); showModal('modal-collection'); setTab(this)">收集展示</div>
+    <div class="nav-tab" onclick="showScreen('screen-game'); showModal('modal-bomb'); setTab(this)">炸弹惩罚</div>
+    <div class="nav-tab" onclick="showScreen('screen-game'); showModal('modal-gift'); setTab(this)">礼包奖励</div>
+    <div class="nav-tab" onclick="showScreen('screen-game'); document.getElementById('banwei-state').classList.add('show'); setTab(this)">班味惩罚态</div>
+    <div class="nav-tab" onclick="showScreen('screen-game'); showModal('modal-pause'); setTab(this)">暂停界面</div>
+    <div class="nav-tab" onclick="showEndScreen(); setTab(this)">终局界面</div>
+</div>
+
+
+<script>
+/* ============================================================
+   Screen & Modal Management
+============================================================ */
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const el = document.getElementById(id);
+    if (el) el.classList.add('active');
+    // 清掉班味状态
+    const bw = document.getElementById('banwei-state');
+    if (bw) bw.classList.remove('show');
+}
+
+function showModal(id) {
+    document.getElementById(id).classList.add('active');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+}
+
+function closeAllModals() {
+    document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('active'));
+}
+
+function setTab(el) {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+}
+
+/* ============================================================
+   Splash → Start auto transition
+============================================================ */
+setTimeout(() => {
+    showScreen('screen-start');
+    // 更新 tab 状态
+    const tabs = document.querySelectorAll('.nav-tab');
+    tabs.forEach(t => t.classList.remove('active'));
+    tabs[1].classList.add('active');
+}, 2400);
+
+/* ============================================================
+   Quiz Logic
+============================================================ */
+let quizAnswered = false;
+
+function selectOpt(btn, isCorrect) {
+    if (quizAnswered) return;
+    quizAnswered = true;
+
+    const allOpts = document.querySelectorAll('.quiz-opt');
+    const resultEl = document.getElementById('quiz-result');
+
+    // 禁用所有
+    allOpts.forEach(o => {
+        o.style.pointerEvents = 'none';
+        if (o.querySelector('[class*=quiz-opt-label]')) {
+            // 找正确答案并高亮
+        }
+    });
+
+    if (isCorrect) {
+        btn.classList.add('selected-correct');
+        resultEl.textContent = '✅ 去班味成功！继续爬楼！';
+        resultEl.className = 'quiz-result-banner correct';
+        setTimeout(() => {
+            closeModal('modal-quiz');
+            resetQuiz();
+            // 显示鼓励浮字
+            showEncourage('去班味成功！✨');
+        }, 1500);
+    } else {
+        btn.classList.add('selected-wrong');
+        // 高亮正确答案
+        allOpts.forEach(o => {
+            if (o.getAttribute('onclick').includes('true')) {
+                o.classList.add('highlight-correct');
+            }
+        });
+        resultEl.textContent = '❌ 班味太重了！受到惩罚！';
+        resultEl.className = 'quiz-result-banner wrong';
+        setTimeout(() => {
+            closeModal('modal-quiz');
+            resetQuiz();
+            // 随机触发惩罚
+            if (Math.random() > 0.5) {
+                showBanweiState();
+            } else {
+                // 掉楼提示
+                showEncourage('掉落 3 层 😱');
+            }
+        }, 1800);
+    }
+}
+
+function resetQuiz() {
+    quizAnswered = false;
+    document.querySelectorAll('.quiz-opt').forEach(o => {
+        o.className = 'quiz-opt';
+        o.style.pointerEvents = '';
+    });
+    const r = document.getElementById('quiz-result');
+    r.className = 'quiz-result-banner';
+    r.textContent = '';
+}
+
+/* ============================================================
+   Banwei State
+============================================================ */
+function showBanweiState() {
+    document.getElementById('banwei-state').classList.add('show');
+}
+
+/* ============================================================
+   Encourage Float
+============================================================ */
+function showEncourage(text) {
+    const el = document.getElementById('encourage-text');
+    el.textContent = text;
+    el.classList.remove('show');
+    void el.offsetWidth; // reflow
+    el.classList.add('show');
+}
+
+/* ============================================================
+   Bomb Countdown
+============================================================ */
+let bombTimerInterval = null;
+
+document.getElementById('modal-bomb').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('modal-bomb')) {
+        closeModal('modal-bomb');
+    }
+});
+
+function startBombCountdown() {
+    let t = 10;
+    const el = document.getElementById('bomb-timer');
+    el.textContent = t;
+    clearInterval(bombTimerInterval);
+    bombTimerInterval = setInterval(() => {
+        t--;
+        el.textContent = t;
+        if (t <= 0) {
+            clearInterval(bombTimerInterval);
+            closeModal('modal-bomb');
+            resetAndShowStart();
+        }
+    }, 1000);
+}
+
+// 炸弹弹窗打开时启动倒计时
+const bombBackdrop = document.getElementById('modal-bomb');
+const bombObserver = new MutationObserver((muts) => {
+    muts.forEach(m => {
+        if (m.target.classList.contains('active')) {
+            startBombCountdown();
+        } else {
+            clearInterval(bombTimerInterval);
+        }
+    });
+});
+bombObserver.observe(bombBackdrop, { attributes: true, attributeFilter: ['class'] });
+
+/* ============================================================
+   End Screen Confetti
+============================================================ */
+function showEndScreen() {
+    showScreen('screen-end');
+    createConfetti();
+}
+
+function createConfetti() {
+    const container = document.getElementById('confetti-container');
+    container.innerHTML = '';
+    const colors = ['#FFD700','#FF6B6B','#56C596','#4DA6FF','#FF9F6A','#C8A2FF'];
+    for (let i = 0; i < 60; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.cssText = `
+            left:${Math.random()*100}%;
+            top:${Math.random()*-20}%;
+            background:${colors[Math.floor(Math.random()*colors.length)]};
+            width:${6+Math.random()*8}px;
+            height:${6+Math.random()*8}px;
+            border-radius:${Math.random()>0.5?'50%':'3px'};
+            animation-duration:${2+Math.random()*3}s;
+            animation-delay:${Math.random()*2}s;
+            opacity:1;
+        `;
+        container.appendChild(piece);
+    }
+}
+
+/* ============================================================
+   Reset
+============================================================ */
+function resetAndShowStart() {
+    closeAllModals();
+    clearInterval(bombTimerInterval);
+    document.getElementById('banwei-state').classList.remove('show');
+    showScreen('screen-start');
+    const tabs = document.querySelectorAll('.nav-tab');
+    tabs.forEach(t => t.classList.remove('active'));
+    tabs[1].classList.add('active');
+}
+
+/* ============================================================
+   Backdrop click to close
+============================================================ */
+document.querySelectorAll('.modal-backdrop').forEach(bd => {
+    bd.addEventListener('click', (e) => {
+        if (e.target === bd) {
+            // 炸弹弹窗不允许点遮罩关闭
+            if (bd.id !== 'modal-bomb' && bd.id !== 'modal-quiz') {
+                bd.classList.remove('active');
+            }
+        }
+    });
+});
+</script>
+
+</body>
+</html>
