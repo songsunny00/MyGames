@@ -12,7 +12,6 @@ const { PunishmentSystem } = require("../systems/PunishmentSystem.js");
 const { QuizPanel } = require("./QuizPanel.js");
 const { BombModal } = require("./BombModal.js");
 
-// GameScene内部状态（不暴露给Main）
 const GS = {
   PLAYING: "playing",
   QUIZ: "quiz",
@@ -25,7 +24,7 @@ const GS = {
 
 class GameScene {
   constructor(onEvent) {
-    this.onEvent = onEvent; // 向Main发送事件
+    this.onEvent = onEvent;
 
     this.char = new Character();
     this.platformMgr = new PlatformManager();
@@ -38,13 +37,11 @@ class GameScene {
     this.quizPanel = new QuizPanel();
     this.bombModal = new BombModal();
 
-    // 摄像机世界Y（屏幕顶边对应的世界Y）
     this.cameraWorldY = 0;
-
     this._state = GS.PLAYING;
     this._scrollSpeed = CONFIG.SCROLL_SPEED_ROUND1;
     this._punishTimer = 0;
-    this._quizForBanwei = false; // 当前quiz是否为解除班味惩罚
+    this._quizForBanwei = false;
 
     this._clouds = this._initClouds();
     this._bgT = 0;
@@ -52,7 +49,6 @@ class GameScene {
     this._round = 0;
   }
 
-  // ── 初始化新游戏 ──
   init(completionRound = 0) {
     this._round = completionRound;
     this._collectionProgress = [
@@ -70,21 +66,19 @@ class GameScene {
     ];
     this._scrollSpeed = speeds[Math.min(completionRound, 2)];
 
-    // 初始化平台
     const initCamY = -(CONFIG.H * 0.7);
     this.cameraWorldY = initCamY;
-    this.platformMgr.init(initCamY);
+    this.platformMgr.init(initCamY, completionRound);
 
-    // 角色定位到第1层
-    const floor1 = this.platformMgr.platforms.find((p) => p.floor === 1);
-    const { x, w } = this.platformMgr.floorToX(1);
-    this.char.worldX = x + w / 2;
-    this.char.worldY = floor1 ? floor1.worldY : 0;
-    this.char.velY = -CONFIG.JUMP_SPEED;
-    this.char.velX = 0;
+    const { startX, direction, width } = this.platformMgr.floorToXRange(1);
+    const floor1WorldY = this.platformMgr.floorToWorldY(1);
+    this.char.worldX = startX + direction * (width * 0.5);
+    this.char.worldY = floor1WorldY;
+    this.char.velY = 0;
     this.char.currentFloor = 1;
     this.char.maxFloor = 1;
     this.char.isBanwei = false;
+    this.char.isGrounded = true;
 
     this.obstacleMgr.reset();
     this.fx = new FeedbackFX();
@@ -94,11 +88,10 @@ class GameScene {
     this._bgT = 0;
   }
 
-  // ── 每帧更新 ──
   update(dt, input) {
     this._bgT += dt;
+    input.update(dt);
 
-    // ── 暂停状态 ──
     if (this._state === GS.PAUSE) {
       const hits = input.consumeTaps(this.hud.getPauseOverlayAreas());
       if (hits.includes("resume")) this._state = GS.PLAYING;
@@ -116,54 +109,51 @@ class GameScene {
       return;
     }
 
-    // ── Quiz面板 ──
     if (this._state === GS.QUIZ) {
       this._updateQuiz(dt, input);
       this.fx.update(dt);
       return;
     }
 
-    // ── 炸弹弹窗 ──
     if (this._state === GS.BOMB_MODAL) {
       this._updateBombModal(dt, input);
       this.fx.update(dt);
       return;
     }
 
-    // ── 所有活跃状态（PLAYING / BANWEI / PUNISHMENT）共用物理更新 ──
-    const allowJump = this._state !== GS.PUNISHMENT;
-    const landedPlat = this.char.update(
+    const allowControl = this._state !== GS.PUNISHMENT;
+    const landedSeg = this.char.update(
       dt,
       this.platformMgr,
       input,
       this._state,
-      allowJump,
+      allowControl,
     );
 
     this._updateCamera(dt);
     this.platformMgr.update(this.cameraWorldY);
     this.fx.update(dt);
 
-    // ── 惩罚倒计时 ──
     if (this._state === GS.PUNISHMENT) {
       this._punishTimer -= dt;
       if (this._punishTimer <= 0) this._state = GS.PLAYING;
       return;
     }
 
-    // ── 正常游戏（含班味） ──
-    // 障碍物更新（只在PLAYING时生成新炸弹礼包）
     if (this._state === GS.PLAYING) {
       this.obstacleMgr.update(dt, this.char.currentFloor);
-      this._checkBombGiftCollisions();
+      this._checkBombCollision();
+      this._checkGiftCollect();
+      this._checkQuizTrigger();
     }
 
-    // 落地处理
-    if (landedPlat) {
-      this._onLanded(landedPlat);
+    if (landedSeg && this._state === GS.BANWEI) {
+      if (!landedSeg._banweiQuizConsumed) {
+        landedSeg._banweiQuizConsumed = true;
+        this._triggerQuiz(true);
+      }
     }
 
-    // HUD点击（暂停）
     const hudHits = input.consumeTaps(this.hud.getClickAreas());
     if (hudHits.includes("pause")) {
       this._state = GS.PAUSE;
@@ -175,43 +165,57 @@ class GameScene {
 
   _updateCamera(dt) {
     const charScreenY = this.char.worldY - this.cameraWorldY;
-
-    // 角色接近屏幕上方时，摄像机跟随
     const followY = this.char.worldY - CONFIG.H * CONFIG.CAMERA_FOLLOW_RATIO;
     if (followY < this.cameraWorldY) {
       this.cameraWorldY = followY;
     }
 
-    // 自动向上滚动
     this.cameraWorldY -= this._scrollSpeed * dt;
 
-    // 防止角色完全脱离画面底部（回位到当前楼层）
     if (charScreenY > CONFIG.H + 100) {
       const floorY = this.platformMgr.floorToWorldY(
         Math.max(1, this.char.currentFloor),
       );
-      const { x, w } = this.platformMgr.floorToX(this.char.currentFloor);
-      this.char.worldX = x + w / 2;
+      const { startX, direction, width } = this.platformMgr.floorToXRange(
+        this.char.currentFloor,
+      );
+      this.char.worldX = startX + direction * (width * 0.5);
       this.char.worldY = floorY;
-      this.char.velY = -CONFIG.JUMP_SPEED;
+      this.char.velY = 0;
       this.cameraWorldY = floorY - CONFIG.H * 0.7;
     }
   }
 
-  _onLanded(plat) {
-    if (this._state === GS.BANWEI) {
-      // 班味状态：任意落地就触发解除quiz
-      if (!plat._banweiQuizConsumed) {
-        plat._banweiQuizConsumed = true;
-        this._triggerQuiz(true);
-      }
-      return;
-    }
-
-    // PLAYING：检查quiz方块
-    if (plat.hasQuiz && !plat.quizConsumed) {
-      plat.quizConsumed = true;
+  _checkQuizTrigger() {
+    const quizFloor = this.platformMgr.checkQuizTrigger(this.char);
+    if (quizFloor) {
       this._triggerQuiz(false);
+    }
+  }
+
+  _checkGiftCollect() {
+    const gift = this.platformMgr.checkGiftCollect(this.char);
+    if (gift) {
+      this.fx.burst(gift.x, gift.y - this.cameraWorldY, 16, "#FFD700");
+      this.fx.addFloatText("+5层 🎁", CONFIG.W / 2, CONFIG.H * 0.4, {
+        color: "#FFD700",
+        fontSize: 52,
+      });
+      this.char.currentFloor += 5;
+      if (this.char.currentFloor > this.char.maxFloor) {
+        this.char.maxFloor = this.char.currentFloor;
+      }
+    }
+  }
+
+  _checkBombCollision() {
+    const charSX = this.char.worldX;
+    const charSY = this.char.worldY - this.cameraWorldY;
+    const charProxy = { worldX: charSX, worldY: charSY };
+
+    const bomb = this.obstacleMgr.checkBombHit(charProxy);
+    if (bomb) {
+      this._onBombHit();
     }
   }
 
@@ -225,7 +229,6 @@ class GameScene {
   _updateQuiz(dt, input) {
     this.quizPanel.update(dt);
 
-    // 选项点击
     const optAreas = this.quizPanel.getOptionAreas();
     const hits = input.consumeTaps(optAreas);
     for (const hit of hits) {
@@ -234,7 +237,6 @@ class GameScene {
       }
     }
 
-    // 结果处理（展示时间结束后触发）
     const result = this.quizPanel.getResult();
     if (result === "correct") {
       this.fx.burst(CONFIG.W / 2, CONFIG.H * 0.5, 18, "#2ECC71");
@@ -244,7 +246,6 @@ class GameScene {
       });
 
       if (this._quizForBanwei) {
-        // 解除班味
         this.char.isBanwei = false;
         this._quizForBanwei = false;
         this.fx.addFloatText("班味已清除！", CONFIG.W / 2, CONFIG.H * 0.33, {
@@ -267,12 +268,12 @@ class GameScene {
       const newFloor = Math.max(1, this.char.currentFloor - floors);
       this.char.currentFloor = newFloor;
 
-      // 传送到掉落楼层
       const targetWorldY = this.platformMgr.floorToWorldY(newFloor);
-      const { x, w } = this.platformMgr.floorToX(newFloor);
-      this.char.worldX = x + w / 2;
+      const { startX, direction, width } =
+        this.platformMgr.floorToXRange(newFloor);
+      this.char.worldX = startX + direction * (width * 0.5);
       this.char.worldY = targetWorldY;
-      this.char.velY = -CONFIG.JUMP_SPEED;
+      this.char.velY = 0;
 
       this.fx.addFloatText(
         this.punishSystem.randomFallText(),
@@ -288,7 +289,6 @@ class GameScene {
       this._state = GS.PUNISHMENT;
       this._punishTimer = 1.5;
     } else {
-      // 班味惩罚
       this.char.isBanwei = true;
       this.fx.addFloatText(
         this.punishSystem.randomBanweiText(),
@@ -298,23 +298,6 @@ class GameScene {
       );
       this._state = GS.BANWEI;
     }
-  }
-
-  _checkBombGiftCollisions() {
-    // 炸弹礼包在屏幕坐标系；用角色屏幕坐标做碰撞
-    const charSX = this.char.worldX;
-    const charSY = this.char.worldY - this.cameraWorldY;
-
-    const charProxy = { worldX: charSX, worldY: charSY };
-
-    const bomb = this.obstacleMgr.checkBombHit(charProxy);
-    if (bomb) {
-      this._onBombHit();
-      return;
-    }
-
-    const gift = this.obstacleMgr.checkGiftHit(charProxy);
-    if (gift) this._onGiftCollected(gift);
   }
 
   _onBombHit() {
@@ -327,53 +310,9 @@ class GameScene {
     this._state = GS.BOMB_MODAL;
   }
 
-  _onGiftCollected(gift) {
-    const charSY = this.char.worldY - this.cameraWorldY;
-    this.fx.burst(this.char.worldX, charSY, 16, this._giftColor(gift.tier));
-
-    if (gift.tier === "bronze") {
-      this.fx.addFloatText(
-        this.punishSystem.randomEncourageText(),
-        this.char.worldX,
-        charSY - 80,
-        { color: "#FFD700", fontSize: 44 },
-      );
-    } else {
-      const floors =
-        gift.tier === "gold"
-          ? CONFIG.GIFT_GOLD_FLOORS
-          : CONFIG.GIFT_SILVER_FLOORS;
-      this.char.forceJump(floors);
-      this.fx.confetti(22);
-      this.fx.addFloatText(`+${floors}层 🎉`, CONFIG.W / 2, CONFIG.H * 0.4, {
-        color: "#FFD700",
-        fontSize: 58,
-      });
-
-      // 瞬移到新楼层
-      const newFloor = this.char.currentFloor;
-      const newWorldY = this.platformMgr.floorToWorldY(newFloor);
-      const { x, w } = this.platformMgr.floorToX(newFloor);
-      this.char.worldX = x + w / 2;
-      this.char.worldY = newWorldY;
-      this.char.velY = -CONFIG.JUMP_SPEED;
-      this.cameraWorldY = newWorldY - CONFIG.H * 0.7;
-      this.platformMgr.update(this.cameraWorldY);
-    }
-  }
-
-  _giftColor(tier) {
-    return tier === "gold"
-      ? "#FFD700"
-      : tier === "silver"
-        ? "#C0C0C0"
-        : "#CD7F32";
-  }
-
   _updateBombModal(dt, input) {
     this.bombModal.update(dt);
 
-    // 倒计时结束自动重来
     if (this.bombModal.type === "share" && this.bombModal.countdown <= 0) {
       this.onEvent({ type: "bombRestart" });
       return;
@@ -416,38 +355,27 @@ class GameScene {
         },
       });
     } else {
-      // 非微信环境：直接继续
       this._state = GS.PLAYING;
     }
   }
 
-  // ── 渲染 ──
   render(ctx) {
     ctx.save();
     this.fx.applyShake(ctx);
 
-    // 背景
     this._drawBackground(ctx);
-
-    // 平台
     this.platformMgr.render(ctx, this.cameraWorldY);
 
-    // 角色
     const charSX = this.char.worldX;
     const charSY = this.char.worldY - this.cameraWorldY;
     this.char.renderShadow(ctx, charSX, charSY);
     this.char.render(ctx, charSX, charSY);
 
-    // 炸弹 + 礼包（屏幕坐标）
     this.obstacleMgr.renderBombs(ctx);
-    this.obstacleMgr.renderGifts(ctx);
-
-    // 特效
     this.fx.render(ctx);
 
     ctx.restore();
 
-    // HUD（不受震动影响）
     this.hud.render(
       ctx,
       this.char.currentFloor,
@@ -455,7 +383,6 @@ class GameScene {
       this._getCollectionProgressText(),
     );
 
-    // 暂停覆盖
     if (this._state === GS.PAUSE) {
       this.hud.renderPauseOverlay(ctx);
     }
@@ -464,17 +391,14 @@ class GameScene {
       this.collectionPanel.render(ctx);
     }
 
-    // 班味提示栏
     if (this._state === GS.BANWEI) {
       this._drawBanweiBar(ctx);
     }
 
-    // Quiz面板（叠加）
     if (this._state === GS.QUIZ) {
       this.quizPanel.render(ctx);
     }
 
-    // 炸弹弹窗（叠加）
     if (this._state === GS.BOMB_MODAL) {
       this.bombModal.render(ctx);
     }
@@ -489,7 +413,6 @@ class GameScene {
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, CONFIG.W, CONFIG.H);
 
-    // 太阳光晕
     ctx.save();
     const sunGrd = ctx.createRadialGradient(-80, -80, 0, -80, -80, 400);
     sunGrd.addColorStop(0, "rgba(255,255,200,0.2)");
@@ -500,7 +423,6 @@ class GameScene {
 
     this._drawClouds(ctx);
 
-    // 地面渐变
     ctx.save();
     const groundGrd = ctx.createLinearGradient(0, CONFIG.H - 90, 0, CONFIG.H);
     groundGrd.addColorStop(0, "transparent");

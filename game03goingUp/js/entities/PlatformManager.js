@@ -1,221 +1,374 @@
 // 平台管理器
-// 负责生成、滚动和回收Z形楼梯平台
+// 负责生成连续的Z型楼梯，支持缺口和障碍物放置
 const { CONFIG } = require('../config.js')
 
 const C = CONFIG.COLOR
 
 class PlatformManager {
   constructor() {
-    this.platforms = []       // 活跃平台列表
-    this.nextFloor = 1        // 下一个待生成的楼层号
-    this.quizTrigger = null   // 当前帧触发的quiz平台
-
-    // 下一个quiz出现的楼层
-    this._nextQuizFloor = this._randomQuizFloor(1)
+    this.segments = []         // 楼梯段列表（斜坡+拐角）
+    this.nextFloor = 1         // 下一个待生成的楼层
+    this.quizTriggers = []     // 触发的quiz楼层
+    this._nextQuizFloor = this._randomQuizFloor(0)
+    this._nextGiftFloor = this._randomGiftFloor(0)
+    this._round = 0            // 当前周目
   }
 
-  // 初始化：生成初始若干平台
-  init(cameraWorldY) {
-    // 生成画面上方到画面下方所有需要的平台
-    this.platforms = []
+  init(cameraWorldY, round = 0) {
+    this.segments = []
     this.nextFloor = 1
-    this._nextQuizFloor = this._randomQuizFloor(1)
+    this._round = round
+    this._nextQuizFloor = this._randomQuizFloor(0)
+    this._nextGiftFloor = this._randomGiftFloor(0)
+    this.quizTriggers = []
     this._generate(cameraWorldY)
   }
 
-  // 返回指定楼层的世界Y坐标（平台顶面）
+  setRound(round) {
+    this._round = round
+  }
+
+  // 楼层世界Y坐标
   floorToWorldY(floor) {
     return -(floor - 1) * CONFIG.FLOOR_HEIGHT
   }
 
-  // 返回指定楼层的X坐标和宽度
-  floorToX(floor) {
-    const w = this._platformWidth(floor)
-    const isRight = (floor % 2 === 1)  // 奇数层在右，偶数层在左
-    const x = isRight ? CONFIG.PLATFORM_RIGHT_X : CONFIG.PLATFORM_LEFT_X
-    return { x, w }
+  // 楼层X范围
+  floorToXRange(floor) {
+    const width = this._floorWidth(floor)
+    const isRightToLeft = floor % 2 === 1
+    if (isRightToLeft) {
+      return { startX: CONFIG.W - CONFIG.PLATFORM_MARGIN, endX: CONFIG.PLATFORM_MARGIN, width, direction: -1 }
+    } else {
+      return { startX: CONFIG.PLATFORM_MARGIN, endX: CONFIG.W - CONFIG.PLATFORM_MARGIN, width, direction: 1 }
+    }
   }
 
-  // 计算平台宽度（随楼层缩小）
-  _platformWidth(floor) {
-    const reduced = Math.floor((floor - 1) * CONFIG.PLATFORM_W_SHRINK)
-    return Math.max(CONFIG.PLATFORM_W_MIN, CONFIG.PLATFORM_W_START - reduced)
+  _floorWidth(floor) {
+    const shrink = Math.floor((floor - 1) * CONFIG.PLATFORM_W_SHRINK)
+    return Math.max(CONFIG.PLATFORM_W_MIN, CONFIG.PLATFORM_W_START - shrink)
   }
 
-  // 生成缺失的平台（确保cameraWorldY上方200px到下方H+200px都有平台）
   _generate(cameraWorldY) {
-    // 需要生成到的最顶（最小worldY）
-    const topWorldY = cameraWorldY - 200
-    while (true) {
-      const nextWorldY = this.floorToWorldY(this.nextFloor)
-      if (nextWorldY < topWorldY) break
-      if (this.nextFloor > CONFIG.MAX_FLOOR + 5) break
-      this._createPlatform(this.nextFloor)
+    const topY = cameraWorldY - CONFIG.H - CONFIG.FLOOR_HEIGHT
+    const maxFloor = CONFIG.MAX_FLOOR + 5
+
+    while (this.nextFloor <= maxFloor) {
+      const floorY = this.floorToWorldY(this.nextFloor)
+      if (floorY < topY) break
+
+      this._createFloor(this.nextFloor)
       this.nextFloor++
     }
   }
 
-  _createPlatform(floor) {
-    const worldY = this.floorToWorldY(floor)
-    const { x, w } = this.floorToX(floor)
-    const hasQuiz = floor === this._nextQuizFloor
-    if (hasQuiz) {
-      this._nextQuizFloor = this._randomQuizFloor(floor + 1)
-    }
-    this.platforms.push({
+  _createFloor(floor) {
+    const { startX, endX, width, direction } = this.floorToXRange(floor)
+    const floorY = this.floorToWorldY(floor)
+    const hasGap = this._round > 0 && floor > 5 && Math.random() < 0.15
+
+    const segment = {
+      type: 'slope',
       floor,
-      worldY,
-      x,
-      w,
-      h: CONFIG.PLATFORM_H,
-      hasQuiz,
-      quizConsumed: false,  // 是否已触发过quiz
+      startX,
+      endX,
+      worldY: floorY,
+      width,
+      direction,
+      hasGap,
+      gapX: hasGap ? startX + direction * (width * 0.4 + Math.random() * width * 0.2) : 0,
+      gapWidth: hasGap ? 60 + Math.random() * 40 : 0,
+      hasQuiz: floor === this._nextQuizFloor,
+      quizConsumed: false,
+      hasGift: floor === this._nextGiftFloor,
+      giftConsumed: false,
+      giftX: startX + direction * (width * 0.3 + Math.random() * width * 0.4),
+    }
+
+    if (segment.hasQuiz) {
+      this._nextQuizFloor = this._randomQuizFloor(floor)
+    }
+    if (segment.hasGift) {
+      this._nextGiftFloor = this._randomGiftFloor(floor)
+    }
+
+    this.segments.push(segment)
+
+    const cornerY = floorY - CONFIG.FLOOR_HEIGHT * 0.1
+    this.segments.push({
+      type: 'corner',
+      floor,
+      x: endX,
+      worldY: cornerY,
+      direction,
     })
   }
 
   _randomQuizFloor(fromFloor) {
-    const interval = CONFIG.QUIZ_INTERVAL_MIN +
+    return fromFloor + CONFIG.QUIZ_INTERVAL_MIN + 
       Math.floor(Math.random() * (CONFIG.QUIZ_INTERVAL_MAX - CONFIG.QUIZ_INTERVAL_MIN + 1))
-    return fromFloor + interval
   }
 
-  // 每帧更新：cameraWorldY = 摄像机顶部世界Y
+  _randomGiftFloor(fromFloor) {
+    return fromFloor + 8 + Math.floor(Math.random() * 10)
+  }
+
   update(cameraWorldY) {
-    this.quizTrigger = null
-    // 生成新平台
     this._generate(cameraWorldY)
-    // 回收远离画面的平台（在摄像机底部下方500px以上）
-    const bottomWorldY = cameraWorldY + CONFIG.H + 500
-    this.platforms = this.platforms.filter(p => p.worldY <= bottomWorldY)
+    const bottomY = cameraWorldY + CONFIG.H + 500
+    this.segments = this.segments.filter(s => s.worldY >= bottomY === false)
   }
 
-  // 落地检测：判断角色是否落在某个平台上
-  // 返回平台信息 {worldY, floor, hasQuiz, ...} 或 null
-  checkLanding(char) {
-    if (char.velY <= 0) return null  // 向上跳跃时不检测
+  // 获取角色当前所在的楼梯段
+  getCurrentSegment(char) {
+    const charY = char.worldY
+    const charX = char.worldX
 
-    const feetY = char.worldY
-    const halfW = CONFIG.CHAR_W / 2
+    for (const seg of this.segments) {
+      if (seg.type !== 'slope') continue
+      
+      const yDiff = Math.abs(charY - seg.worldY)
+      if (yDiff > 30) continue
 
-    for (const plat of this.platforms) {
-      // 垂直：脚底在平台顶面附近
-      const dy = feetY - plat.worldY
-      if (dy < 0 || dy > CONFIG.LAND_TOLERANCE) continue
-
-      // 水平：有重叠
-      const charLeft = char.worldX - halfW
-      const charRight = char.worldX + halfW
-      const platRight = plat.x + plat.w
-
-      if (charRight < plat.x + 10 || charLeft > platRight - 10) continue
-
-      // 落地！
-      return plat
+      const minX = Math.min(seg.startX, seg.endX)
+      const maxX = Math.max(seg.startX, seg.endX)
+      if (charX >= minX - 20 && charX <= maxX + 20) {
+        return seg
+      }
     }
     return null
   }
 
-  // 给定cameraWorldY，将世界Y转为屏幕Y
-  worldToScreenY(worldY, cameraWorldY) {
-    return worldY - cameraWorldY
+  // 检测是否在缺口上
+  isOnGap(char) {
+    const seg = this.getCurrentSegment(char)
+    if (!seg || !seg.hasGap) return false
+
+    const gapMin = Math.min(seg.gapX, seg.gapX + seg.direction * seg.gapWidth)
+    const gapMax = Math.max(seg.gapX, seg.gapX + seg.direction * seg.gapWidth)
+    return char.worldX >= gapMin && char.worldX <= gapMax
   }
 
-  // 渲染所有可见平台
+  // 落地检测
+  checkLanding(char) {
+    if (char.velY <= 0) return null
+
+    const feetY = char.worldY
+    const charX = char.worldX
+
+    for (const seg of this.segments) {
+      if (seg.type !== 'slope') continue
+
+      const dy = feetY - seg.worldY
+      if (dy < 0 || dy > CONFIG.LAND_TOLERANCE) continue
+
+      const minX = Math.min(seg.startX, seg.endX)
+      const maxX = Math.max(seg.startX, seg.endX)
+      if (charX < minX - 10 || charX > maxX + 10) continue
+
+      if (seg.hasGap) {
+        const gapMin = Math.min(seg.gapX, seg.gapX + seg.direction * seg.gapWidth)
+        const gapMax = Math.max(seg.gapX, seg.gapX + seg.direction * seg.gapWidth)
+        if (charX >= gapMin - 5 && charX <= gapMax + 5) continue
+      }
+
+      return seg
+    }
+    return null
+  }
+
+  // 检测答题触发
+  checkQuizTrigger(char) {
+    for (const seg of this.segments) {
+      if (!seg.hasQuiz || seg.quizConsumed) continue
+      if (seg.type !== 'slope') continue
+
+      const yDiff = Math.abs(char.worldY - seg.worldY)
+      if (yDiff > 40) continue
+
+      const minX = Math.min(seg.startX, seg.endX)
+      const maxX = Math.max(seg.startX, seg.endX)
+      if (char.worldX < minX || char.worldX > maxX) continue
+
+      seg.quizConsumed = true
+      return seg.floor
+    }
+    return null
+  }
+
+  // 检测礼包收集
+  checkGiftCollect(char) {
+    for (const seg of this.segments) {
+      if (!seg.hasGift || seg.giftConsumed) continue
+      if (seg.type !== 'slope') continue
+
+      const yDiff = Math.abs(char.worldY - seg.worldY)
+      if (yDiff > 40) continue
+
+      const dist = Math.abs(char.worldX - seg.giftX)
+      if (dist < 50) {
+        seg.giftConsumed = true
+        return { floor: seg.floor, x: seg.giftX, y: seg.worldY }
+      }
+    }
+    return null
+  }
+
   render(ctx, cameraWorldY) {
-    const viewTop = cameraWorldY
-    const viewBottom = cameraWorldY + CONFIG.H
+    for (const seg of this.segments) {
+      const screenY = seg.worldY - cameraWorldY
+      if (screenY > CONFIG.H + 100 || screenY < -100) continue
 
-    for (const plat of this.platforms) {
-      const screenY = plat.worldY - cameraWorldY
-      // 视野裁剪
-      if (screenY > viewBottom + 60 || screenY < viewTop - 60) continue
-
-      this._drawPlatform(ctx, plat, screenY)
+      if (seg.type === 'slope') {
+        this._drawSlope(ctx, seg, screenY)
+      } else {
+        this._drawCorner(ctx, seg, screenY)
+      }
     }
   }
 
-  _drawPlatform(ctx, plat, screenY) {
-    const { x, w, h, hasQuiz, quizConsumed } = plat
-    const DEPTH = 14  // 3D厚度感
+  _drawSlope(ctx, seg, screenY) {
+    const { startX, endX, direction, width, hasGap, gapX, gapWidth, hasQuiz, quizConsumed, hasGift, giftConsumed, giftX, floor } = seg
+    const h = CONFIG.PLATFORM_H
+    const minX = Math.min(startX, endX)
+    const maxX = Math.max(startX, endX)
 
     ctx.save()
 
-    // ── 投影阴影 ──
-    ctx.beginPath()
-    ctx.ellipse(x + w / 2, screenY + h + DEPTH + 6, w * 0.45, 8, 0, 0, Math.PI * 2)
-    ctx.fillStyle = 'rgba(0,0,0,0.10)'
-    ctx.fill()
+    // 楼梯斜坡背景
+    const grad = ctx.createLinearGradient(minX, screenY, maxX, screenY)
+    const colorPhase = (floor % 4) / 4
+    if (colorPhase < 0.25) {
+      grad.addColorStop(0, '#C4DC3A')
+      grad.addColorStop(1, '#D8EE50')
+    } else if (colorPhase < 0.5) {
+      grad.addColorStop(0, '#D8EE50')
+      grad.addColorStop(1, '#EEFF66')
+    } else if (colorPhase < 0.75) {
+      grad.addColorStop(0, '#F0FF70')
+      grad.addColorStop(1, '#FFFF88')
+    } else {
+      grad.addColorStop(0, '#FFFF90')
+      grad.addColorStop(1, '#FFFFAA')
+    }
 
-    // ── 侧面（底部暗色） ──
-    ctx.beginPath()
-    ctx.moveTo(x, screenY + h)
-    ctx.lineTo(x + w, screenY + h)
-    ctx.lineTo(x + w, screenY + h + DEPTH)
-    ctx.lineTo(x, screenY + h + DEPTH)
-    ctx.closePath()
-    ctx.fillStyle = C.PLATFORM_FRONT
-    ctx.fill()
+    // 绘制斜坡（如果有缺口则分段绘制）
+    if (hasGap) {
+      const gapMin = Math.min(gapX, gapX + direction * gapWidth)
+      const gapMax = Math.max(gapX, gapX + direction * gapWidth)
 
-    // ── 顶面（主色渐变） ──
-    const grad = ctx.createLinearGradient(x, screenY, x + w, screenY)
-    grad.addColorStop(0, '#C4DC3A')
-    grad.addColorStop(0.4, C.PLATFORM_TOP)
-    grad.addColorStop(1, '#D8A000')
-    ctx.beginPath()
-    this._roundRect(ctx, x, screenY, w, h, 8)
-    ctx.fillStyle = grad
-    ctx.fill()
+      this._drawSlopeSection(ctx, minX, gapMin, screenY, h, grad)
+      this._drawSlopeSection(ctx, gapMax, maxX, screenY, h, grad)
 
-    // ── 顶面高光 ──
-    ctx.beginPath()
-    this._roundRect(ctx, x + 4, screenY + 4, w - 8, h * 0.4, 4)
-    ctx.fillStyle = 'rgba(255,255,255,0.25)'
-    ctx.fill()
+      // 缺口警示
+      ctx.fillStyle = 'rgba(255,0,0,0.3)'
+      ctx.fillRect(gapMin, screenY - 5, gapMax - gapMin, 3)
+    } else {
+      this._drawSlopeSection(ctx, minX, maxX, screenY, h, grad)
+    }
 
-    // ── Quiz方块（❓）──
+    // Quiz方块
     if (hasQuiz && !quizConsumed) {
-      this._drawQuizBlock(ctx, x + w / 2, screenY - 30, plat.floor)
+      const quizX = startX + direction * (width * 0.5)
+      this._drawQuizBlock(ctx, quizX, screenY - 30)
+    }
+
+    // 礼包
+    if (hasGift && !giftConsumed) {
+      this._drawGiftOnStair(ctx, giftX, screenY - 40)
     }
 
     ctx.restore()
   }
 
-  _drawQuizBlock(ctx, cx, cy, floor) {
-    const t = Date.now() / 1000
-    const floatY = Math.sin(t * 2.5) * 8  // 上下浮动
-    const y = cy + floatY
+  _drawSlopeSection(ctx, x1, x2, y, h, grad) {
+    const depth = 10
 
-    const SIZE = 64
-    const half = SIZE / 2
-
-    ctx.save()
-
-    // 阴影
+    // 侧面
+    ctx.fillStyle = C.PLATFORM_FRONT
     ctx.beginPath()
-    ctx.ellipse(cx, y + half + 6, half * 0.7, 6, 0, 0, Math.PI * 2)
-    ctx.fillStyle = 'rgba(0,0,0,0.15)'
+    ctx.moveTo(x1, y + h)
+    ctx.lineTo(x2, y + h)
+    ctx.lineTo(x2, y + h + depth)
+    ctx.lineTo(x1, y + h + depth)
+    ctx.closePath()
     ctx.fill()
 
-    // 方块背景
-    ctx.shadowColor = 'rgba(255,50,50,0.4)'
-    ctx.shadowBlur = 12
-    this._roundRect(ctx, cx - half, y - half, SIZE, SIZE, 12)
+    // 顶面
+    ctx.beginPath()
+    this._roundRect(ctx, x1, y, x2 - x1, h, 6)
+    ctx.fillStyle = grad
+    ctx.fill()
+
+    // 高光
+    ctx.fillStyle = 'rgba(255,255,255,0.3)'
+    ctx.fillRect(x1 + 10, y + 4, (x2 - x1) * 0.3, 6)
+  }
+
+  _drawCorner(ctx, seg, screenY) {
+    const { x, direction } = seg
+    const r = 25
+
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(x, screenY, r, 0, Math.PI * 2)
+    ctx.fillStyle = '#E8D040'
+    ctx.fill()
+    ctx.strokeStyle = '#C0A020'
+    ctx.lineWidth = 3
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  _drawQuizBlock(ctx, cx, cy) {
+    const t = Date.now() / 1000
+    const floatY = Math.sin(t * 2.5) * 6
+    const y = cy + floatY
+    const size = 50
+
+    ctx.save()
+    ctx.shadowColor = 'rgba(255,50,50,0.35)'
+    ctx.shadowBlur = 10
+    this._roundRect(ctx, cx - size/2, y - size/2, size, size, 10)
     ctx.fillStyle = C.OBSTACLE_BG
     ctx.fill()
     ctx.shadowBlur = 0
 
-    // 方块高光（左上角）
-    ctx.beginPath()
-    ctx.ellipse(cx - half * 0.3, y - half * 0.35, half * 0.3, half * 0.18, 0, 0, Math.PI * 2)
-    ctx.fillStyle = 'rgba(255,255,255,0.3)'
-    ctx.fill()
-
-    // ❓文字
-    ctx.font = `bold 40px sans-serif`
+    ctx.font = 'bold 32px sans-serif'
     ctx.fillStyle = '#FFFFFF'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText('?', cx, y + 2)
+    ctx.restore()
+  }
+
+  _drawGiftOnStair(ctx, cx, cy) {
+    const t = Date.now() / 1000
+    const floatY = Math.abs(Math.sin(t * 2.5)) * 6
+    const y = cy - floatY
+
+    ctx.save()
+    ctx.translate(cx, y)
+
+    // 光晕
+    const grd = ctx.createRadialGradient(0, 0, 5, 0, 0, 30)
+    grd.addColorStop(0, 'rgba(255,215,0,0.4)')
+    grd.addColorStop(1, 'transparent')
+    ctx.fillStyle = grd
+    ctx.fillRect(-35, -35, 70, 70)
+
+    // 礼包盒
+    ctx.shadowColor = 'rgba(200,150,0,0.3)'
+    ctx.shadowBlur = 8
+    this._roundRect(ctx, -20, -15, 40, 35, 6)
+    ctx.fillStyle = '#FFD700'
+    ctx.fill()
+    ctx.shadowBlur = 0
+
+    // 丝带
+    ctx.fillStyle = '#FF6B6B'
+    ctx.fillRect(-4, -15, 8, 35)
+    ctx.fillRect(-20, -2, 40, 8)
 
     ctx.restore()
   }

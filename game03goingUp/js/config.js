@@ -6,25 +6,31 @@ const CONFIG = {
   W: 750,
   H: 1334,
 
-  // ── 平台参数 ──
+  // ── 平台参数（Z型楼梯） ──
   FLOOR_HEIGHT: 210,        // 每层楼之间的世界Y距离
-  PLATFORM_H: 36,           // 平台高度
-  PLATFORM_W_START: 360,    // 初始平台宽度
-  PLATFORM_W_MIN: 160,      // 最小平台宽度（200层后）
-  PLATFORM_W_SHRINK: 0.4,   // 每层缩减px数
-
-  // 平台X位置（左/右交替）
-  PLATFORM_LEFT_X: 40,      // 左侧平台起始X
-  PLATFORM_RIGHT_X: 350,    // 右侧平台起始X（750-40-360=350）
+  STEPS_PER_FLOOR: 10,      // 每层阶梯数
+  STEP_HEIGHT: 21,          // 每个阶梯的世界Y高度 = FLOOR_HEIGHT / STEPS_PER_FLOOR
+  PLATFORM_H: 30,           // 阶梯绘制高度
+  PLATFORM_W_START: 280,    // 初始楼层总宽度
+  PLATFORM_W_MIN: 180,      // 最小楼层总宽度
+  PLATFORM_W_SHRINK: 0.25,  // 每层缩减px数
+  PLATFORM_MARGIN: 40,      // 平台距屏幕边缘的距离
 
   // ── 角色参数 ──
   CHAR_W: 80,               // 角色宽度（碰撞盒）
   CHAR_H: 100,              // 角色高度（碰撞盒，含帽子）
   CHAR_BODY_R: 38,          // 身体圆半径（绘制用）
-  JUMP_SPEED: 900,          // 起跳速度（px/s，向上为负）
-  GRAVITY: 1800,            // 重力加速度（px/s²）
-  MOVE_SPEED: 420,          // 水平移动速度（px/s）
-  LAND_TOLERANCE: 20,       // 落地判定容差（px）
+  
+  // 移动参数
+  MOVE_SPEED: 320,          // 水平移动速度（px/s）
+  CLIMB_SPEED: 280,         // 自动爬楼速度（px/s）
+  
+  // 跳跃参数（长按=大跳）
+  JUMP_SMALL_SPEED: 500,    // 小跳初速度（px/s）
+  JUMP_BIG_SPEED: 750,      // 大跳初速度（px/s）
+  JUMP_CHARGE_TIME: 0.15,   // 长按判定时间（秒）
+  GRAVITY: 1600,            // 重力加速度（px/s²）
+  LAND_TOLERANCE: 25,       // 落地判定容差（px）
 
   // 角色在屏幕中的目标位置（相对屏幕H）
   CHAR_SCREEN_Y_RATIO: 0.45,
