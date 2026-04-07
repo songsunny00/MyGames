@@ -84,8 +84,29 @@ class Character {
   }
 
   _autoClimb(dt, segment) {
+    // Z字型楼梯：角色沿斜坡自动向上移动
+    // 根据当前X位置计算对应的Y位置
     const moveSpeed = CONFIG.CLIMB_SPEED * dt
+    
+    // 水平移动
     this.worldX += segment.direction * moveSpeed
+    
+    // 根据X位置计算Y位置（斜坡）
+    if (segment.steps && segment.steps.length > 0) {
+      // 找到当前所在的台阶
+      const progress = (this.worldX - segment.startX) / (segment.endX - segment.startX)
+      const stepIndex = Math.floor(progress * segment.steps.length)
+      const clampedIndex = Math.max(0, Math.min(segment.steps.length - 1, stepIndex))
+      const currentStep = segment.steps[clampedIndex]
+      
+      // 平滑过渡到台阶Y位置
+      if (currentStep) {
+        const targetY = currentStep.worldY
+        const yDiff = targetY - this.worldY
+        // 平滑跟随台阶高度
+        this.worldY += yDiff * 0.3
+      }
+    }
   }
 
   _handleJump(input) {
